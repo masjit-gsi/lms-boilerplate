@@ -12,7 +12,7 @@ useHead({
 const authStore = useAuthStore();
 
 const form = reactive({
-  email: "",
+  username: "",
   password: "",
   remember: false,
 });
@@ -21,7 +21,7 @@ const error = ref("");
 
 const handleSubmit = async () => {
   error.value = "";
-  const result = await authStore.login(form.email, form.password);
+  const result = await authStore.login(form.username, form.password);
   
   if (result.success) {
     navigateTo("/");
@@ -53,10 +53,10 @@ const handleSubmit = async () => {
       <!-- Form -->
       <form class="space-y-5" @submit.prevent="handleSubmit">
         <UiInput
-          v-model="form.email"
-          type="email"
-          label="Email address"
-          placeholder="you@example.com"
+          v-model="form.username"
+          type="text"
+          label="Username"
+          placeholder="your username"
           required
         >
           <template #prefix>

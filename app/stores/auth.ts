@@ -1,10 +1,19 @@
 import { defineStore } from "pinia";
 
-export interface User {
-    id: number;
+export interface Role {
+    id: string;
     name: string;
+    description: string;
+}
+
+export interface User {
+    id: string;
+    name: string;
+    username: string;
     email: string;
-    role: string;
+    roleId: string;
+    status: string;
+    role: Role | string;
     avatar?: string;
 }
 
@@ -27,32 +36,44 @@ export const useAuthStore = defineStore("auth", {
         getUser: (state) => state.user,
         getToken: (state) => state.token,
         isLoggedIn: (state) => state.isAuthenticated && !!state.token,
-        getUserRole: (state) => state.user?.role || "guest",
+        getUserRole: (state) => {
+            if (state.user?.role && typeof state.user.role === 'object') {
+                // @ts-ignore
+                return state.user.role.name || "guest";
+            }
+            return state.user?.role || "guest";
+        },
     },
 
     actions: {
-        async login(email: string, password: string) {
+        async login(username: string, password: string) {
             this.loading = true;
             try {
-                // Simulate API call - replace with actual API
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                const api = useApi();
+                const res: any = await api.post("/user/login", {
+                    username,
+                    password
+                });
 
-                // Mock successful login
-                if (email && password) {
-                    this.user = {
-                        id: 1,
-                        name: "John Doe",
-                        email: email,
-                        role: "admin",
-                    };
-                    this.token = "mock-jwt-token-" + Date.now();
+                const data = res.data || res;
+                const accessToken = data.token?.AccessToken || data.token;
+                const userData = data.user;
+
+                if (accessToken && userData) {
+                    this.token = accessToken;
+                    this.user = userData;
                     this.isAuthenticated = true;
                     return { success: true };
                 }
-                throw new Error("Invalid credentials");
-            } catch (error) {
+
+                throw new Error("Login failed: No token received");
+
+            } catch (error: any) {
                 this.logout();
-                return { success: false, error: (error as Error).message };
+                return {
+                    success: false,
+                    error: error.response?._data?.message || error.message || "Login failed"
+                };
             } finally {
                 this.loading = false;
             }

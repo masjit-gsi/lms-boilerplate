@@ -165,7 +165,7 @@ const handleUserMenuSelect = (item: { value?: string }) => {
                 <UiAvatar :name="authStore.user?.name || 'User'" size="sm" />
                 <div class="hidden md:block text-left">
                   <p class="text-sm font-medium text-slate-900 dark:text-white">{{ authStore.user?.name || 'User' }}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">{{ authStore.user?.role || 'Guest' }}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">{{ typeof authStore.user?.role === 'object' ? authStore.user?.role?.name : authStore.user?.role || 'Guest' }}</p>
                 </div>
                 <svg class="hidden md:block w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />

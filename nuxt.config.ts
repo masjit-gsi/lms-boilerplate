@@ -1,3 +1,5 @@
+const { API_HOST: rawApiHost, TOKEN_KEY, DOMAIN, API_KEY } = process.env
+const API_HOST = rawApiHost?.replace(/\/+$/, '');
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
 
@@ -33,7 +35,7 @@ export default defineNuxtConfig({
     // Development proxy - rewrites /api to /v1
     devProxy: {
       "/api": {
-        target: "http://localhost:8080/v1",
+        target: `${API_HOST}/v1`,
         changeOrigin: true,
       },
     },
@@ -42,7 +44,7 @@ export default defineNuxtConfig({
     routeRules: {
       // /api/users → http://localhost:8080/v1/users
       "/api/**": {
-        proxy: "http://localhost:8080/v1/**",
+        proxy: `${API_HOST}/v1/**`,
       },
     },
   },
