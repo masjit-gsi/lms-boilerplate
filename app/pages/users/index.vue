@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useAuthStore } from "~/stores/auth";
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import * as z from "zod";
+
 definePageMeta({
   layout: "default",
 });
@@ -8,6 +13,96 @@ useHead({
 });
 
 const showModal = ref(false);
+const isEditing = ref(false);
+const loading = ref(false);
+const editingId = ref<number | undefined>(undefined);
+
+// Define Zod Schema
+const userSchema = toTypedSchema(
+  z.object({
+    name: z.string().min(1, "Full Name is required"),
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    role: z.string().min(1, "Role is required"),
+    status: z.string().optional(),
+  })
+);
+
+// Setup form with vee-validate
+const { handleSubmit, defineField, resetForm, errors } = useForm({
+  validationSchema: userSchema,
+});
+
+// Define fields with props for v-model
+const [name, nameProps] = defineField("name");
+const [email, emailProps] = defineField("email");
+const [role, roleProps] = defineField("role");
+const [status, statusProps] = defineField("status");
+
+const filters = reactive({
+  search: "",
+  role: null,
+  status: null,
+  date: null
+});
+
+const handleAddUser = () => {
+  isEditing.value = false;
+  editingId.value = undefined;
+  resetForm({
+    values: {
+      name: "",
+      email: "",
+      role: null, // Select needs null to show placeholder
+      status: "active",
+    },
+  });
+  showModal.value = true;
+};
+
+const handleEditUser = (user: any) => {
+  isEditing.value = true;
+  editingId.value = user.id;
+  resetForm({
+    values: {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    },
+  });
+  showModal.value = true;
+};
+
+const onSubmit = handleSubmit(async (values) => {
+  loading.value = true;
+  // Simulate API call
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  if (isEditing.value && editingId.value !== undefined) {
+    const index = users.value.findIndex((u) => u.id === editingId.value);
+    if (index !== -1) {
+      users.value[index] = {
+        ...users.value[index]!,
+        ...values,
+        id: editingId.value,
+        role: values.role!,
+        status: values.status || "active",
+      };
+    }
+  } else {
+    users.value.push({
+      ...values,
+      id: users.value.length + 1,
+      role: values.role!,
+      status: values.status || "active",
+      avatar: null,
+    });
+  }
+
+  loading.value = false;
+  showModal.value = false;
+});
+
 
 const columns = [
   { key: "name", label: "Name" },
@@ -25,6 +120,18 @@ const users = ref([
   { id: 5, name: "Tom Brown", email: "tom@example.com", role: "User", status: "pending", avatar: null },
 ]);
 
+const roleOptions = [
+  { label: "Administrator", value: "Admin" },
+  { label: "Content Editor", value: "Editor" },
+  { label: "Standard User", value: "User" },
+];
+
+const statusOptions = [
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+  { label: "Pending", value: "pending" },
+];
+
 const getStatusVariant = (status: string) => {
   const variants: Record<string, "success" | "danger" | "warning"> = {
     active: "success",
@@ -40,6 +147,14 @@ const actionItems = [
   { divider: true, label: "" },
   { label: "Delete", value: "delete", danger: true },
 ];
+
+const handleAction = (action: string, row: any) => {
+  if (action === "edit") {
+    handleEditUser(row);
+  } else if (action === "delete") {
+    users.value = users.value.filter(u => u.id !== row.id);
+  }
+};
 </script>
 
 <template>
@@ -58,7 +173,7 @@ const actionItems = [
           Manage your team members and their permissions.
         </p>
       </div>
-      <UiButton variant="primary" @click="showModal = true">
+      <UiButton variant="primary" @click="handleAddUser">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
         </svg>
@@ -70,7 +185,7 @@ const actionItems = [
     <UiCard>
       <div class="flex flex-col sm:flex-row gap-4">
         <div class="flex-1">
-          <UiInput placeholder="Search users..." type="search">
+          <UiInput v-model="filters.search" placeholder="Search users..." type="search">
             <template #prefix>
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -78,19 +193,25 @@ const actionItems = [
             </template>
           </UiInput>
         </div>
-        <div class="flex gap-3">
-          <select class="input-base w-auto">
-            <option value="">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="editor">Editor</option>
-            <option value="user">User</option>
-          </select>
-          <select class="input-base w-auto">
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="pending">Pending</option>
-          </select>
+        <div class="flex flex-wrap gap-3">
+          <UiDatePicker
+            v-model="filters.date"
+            class="w-80"
+            placeholder="Join Date"
+            mode="date"
+          />
+          <UiSelect 
+              v-model="filters.role"
+              placeholder="All Roles" 
+              class="w-40" 
+              :options="roleOptions"
+          />
+          <UiSelect 
+              v-model="filters.status"
+              placeholder="All Status" 
+              class="w-40" 
+              :options="statusOptions"
+          />
         </div>
       </div>
     </UiCard>
@@ -114,8 +235,8 @@ const actionItems = [
           {{ value }}
         </UiBadge>
       </template>
-      <template #cell-actions>
-        <UiDropdown :items="actionItems" align="right">
+      <template #cell-actions="{ row }">
+        <UiDropdown :items="actionItems" align="right" @select="(item: any) => handleAction(item.value, row)">
           <template #trigger>
             <button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
               <svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -138,23 +259,53 @@ const actionItems = [
       </div>
     </div>
 
-    <!-- Add User Modal -->
-    <UiModal v-model="showModal" title="Add New User" size="md">
+    <!-- Add/Edit User Modal -->
+    <UiModal v-model="showModal" :title="isEditing ? 'Edit User' : 'Add New User'" size="md">
       <div class="space-y-4">
-        <UiInput label="Full Name" placeholder="Enter full name" required />
-        <UiInput label="Email Address" type="email" placeholder="Enter email" required />
-        <div class="space-y-2">
-          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Role</label>
-          <select class="input-base">
-            <option value="user">User</option>
-            <option value="editor">Editor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
+        <UiInput 
+          v-model="name"
+          v-bind="nameProps"
+          label="Full Name" 
+          placeholder="Enter full name" 
+          required 
+          :error="errors.name"
+        />
+        
+        <UiInput 
+          v-model="email"
+          v-bind="emailProps"
+          label="Email Address" 
+          type="email" 
+          placeholder="Enter email" 
+          required 
+          :error="errors.email"
+        />
+        
+        <UiSelect 
+            v-model="role"
+            v-bind="roleProps"
+            label="Role" 
+            placeholder="Select a role" 
+            :options="roleOptions"
+            required
+            searchable
+            :error="errors.role"
+        />
+
+        <UiSelect 
+            v-if="isEditing"
+            v-model="status" 
+            v-bind="statusProps"
+            label="Status" 
+            placeholder="Select status" 
+            :options="statusOptions"
+        />
       </div>
       <template #footer>
         <UiButton variant="secondary" @click="showModal = false">Cancel</UiButton>
-        <UiButton variant="primary" @click="showModal = false">Add User</UiButton>
+        <UiButton variant="primary" :loading="loading" @click="onSubmit">
+          {{ isEditing ? 'Save Changes' : 'Add User' }}
+        </UiButton>
       </template>
     </UiModal>
   </div>

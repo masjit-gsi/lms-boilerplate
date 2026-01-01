@@ -6,10 +6,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   // Modules
-  modules: ["@pinia/nuxt"],
+  modules: ["@pinia/nuxt", "@vee-validate/nuxt"],
 
   // CSS
-  css: ["~/assets/css/main.css"],
+  css: ["~/assets/css/main.css", "@vuepic/vue-datepicker/dist/main.css"],
 
   // Vite plugins
   vite: {
