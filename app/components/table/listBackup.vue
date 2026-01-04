@@ -77,42 +77,108 @@
       </div>
 
       <!-- Table -->
-      <UiDataTable
-        :headers="headers"
-        :items="tableData.items"
-        :loading="loading"
-        :show-actions="actions.length > 0"
-        :start-number="numberInc"
-        :sort-key="sortBy[0]?.key"
-        :sort-order="sortBy[0]?.order"
-        :get-row-class="getRowClass"
-        :row-clickable="!!$attrs.onRowClick"
-        @sort="handleDataTableSort"
-        @row-click="handleRowClick"
-      >
-        <!-- Pass through all item.* slots (except actions) -->
-        <template v-for="header in headers.filter(h => h.key !== 'actions')" :key="header.key" #[`item.${header.key}`]="slotProps">
-          <slot :name="`item.${header.key}`" v-bind="slotProps">
-            {{ header.formatter ? header.formatter(slotProps.value) : slotProps.value }}
-          </slot>
-        </template>
-
-        <!-- Actions column -->
-        <template v-if="actions.length > 0" #item.actions="{ item }">
-          <div class="flex items-center justify-center gap-1.5">
-            <template v-for="action in validActions(actions, item)" :key="action.key">
-              <UiIconButton
-                :icon="action.icon || 'mdi-help'"
-                :tooltip="action.tooltip"
-                :color="action.color"
-                size="sm"
-                rounded="md"
-                @click="$emit(action.emit as any, item)"
-              />
+      <div class="overflow-x-auto border border-slate-200 dark:border-slate-700">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-16 border-r border-slate-200 dark:border-slate-700">
+                No
+              </th>
+              <th
+                v-for="header in headers"
+                :key="header.key"
+                :style="{ width: header.width }"
+                :class="[
+                  'px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider border-r border-slate-200 dark:border-slate-700',
+                  header.sortable ? 'cursor-pointer hover:text-slate-900 dark:hover:text-white' : ''
+                ]"
+                @click="handleSort(header.key)"
+              >
+                <div class="flex items-center gap-1">
+                  {{ header.title }}
+                  <template v-if="header.sortable">
+                    <svg 
+                      v-if="sortBy[0]?.key === header.key" 
+                      class="w-4 h-4" 
+                      :class="{ 'rotate-180': sortBy[0]?.order === 'asc' }"
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg v-else class="w-4 h-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                  </template>
+                </div>
+              </th>
+              <th v-if="actions.length > 0" class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-24">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+            <!-- Loading State -->
+            <template v-if="loading">
+              <tr v-for="i in 5" :key="i">
+                <td class="px-4 py-4 border-r border-slate-200 dark:border-slate-700">
+                  <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-8" />
+                </td>
+                <td v-for="header in headers" :key="header.key" class="px-4 py-4 border-r border-slate-200 dark:border-slate-700">
+                  <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                </td>
+                <td v-if="actions.length > 0" class="px-4 py-4">
+                  <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-16 mx-auto" />
+                </td>
+              </tr>
             </template>
-          </div>
-        </template>
-      </UiDataTable>
+
+            <!-- Empty State -->
+            <tr v-else-if="tableData.items.length === 0">
+              <td :colspan="headers.length + (actions.length > 0 ? 2 : 1)" class="px-4 py-3 text-center text-slate-500 dark:text-slate-400">
+                Data tidak ditemukan
+              </td>
+            </tr>
+
+            <!-- Data Rows -->
+            <tr
+              v-else
+              v-for="(item, index) in tableData.items"
+              :key="item.id || index"
+              :class="getRowClass({ item })"
+              @click="handleRowClick(item)"
+            >
+              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700">
+                {{ numberInc + index + 1 }}.
+              </td>
+              <td
+                v-for="header in headers"
+                :key="header.key"
+                class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-700"
+              >
+                <slot :name="`item.${header.key}`" :item="item" :value="item[header.key]">
+                  {{ header.formatter ? header.formatter(item[header.key]) : item[header.key] }}
+                </slot>
+              </td>
+              <td v-if="actions.length > 0" class="px-4 py-3">
+                <div class="flex items-center justify-center gap-2">
+                  <template v-for="action in validActions(actions, item)" :key="action.key">
+                    <UiIconButton
+                      :icon="action.icon || 'mdi-help'"
+                      :tooltip="action.tooltip"
+                      :color="action.color"
+                      size="sm"
+                      rounded="md"
+                      @click="$emit(action.emit as any, item)"
+                    />
+                  </template>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <!-- Pagination -->
       <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
@@ -234,11 +300,8 @@ const headerClass = computed(() => {
 })
 
 const emit = defineEmits<{
-  (e: 'fetchData'): void
-  (e: 'addItem'): void
-  (e: 'editItem', item: any): void
-  (e: 'deleteItem', item: any): void
-  (e: string, ...args: any[]): void
+  fetchData: []
+  [key: string]: any
 }>()
 
 const route = useRoute()
@@ -264,6 +327,10 @@ const numberInc = computed(() => {
   return number
 })
 
+const slottedHeaders = computed(() => {
+  return props.headers.filter((h) => !!slots[`item.${h.key}`])
+})
+
 const addAction = computed(() => {
   return props.actionToolbars?.find((a) => a.type === 'default' && a.show?.({}) !== false)
 })
@@ -275,6 +342,24 @@ const validActions = (arr: Action[], item: any) => {
     if (typeof a.show === 'function') return a.show(item)
     return true
   })
+}
+
+// Color mapping for action colors (semantic colors to hex)
+const colorMap: Record<string, string> = {
+  primary: '#3b82f6',
+  secondary: '#64748b',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  danger: '#ef4444',
+  info: '#06b6d4',
+}
+
+// Get color value (supports hex, semantic names, or fallback)
+const getActionColor = (color?: string): string => {
+  if (!color) return '#64748b'
+  if (color.startsWith('#') || color.startsWith('rgb')) return color
+  return colorMap[color] || color
 }
 
 const resetFilterFromSchema = () => {
@@ -358,12 +443,23 @@ const getItemPerPage = (val: number) => {
   router.replace({ path: route.path, query: filterLocal.value })
 }
 
-// Handle sort from UiDataTable component
-const handleDataTableSort = (payload: { key: string; order: 'asc' | 'desc' }) => {
-  sortBy.value = [{ key: payload.key, order: payload.order }]
-  filterLocal.value.sortBy = payload.key
-  filterLocal.value.sortType = payload.order
-  router.replace({ path: route.path, query: filterLocal.value })
+const handleSort = (headerKey: string) => {
+  const header = props.headers.find(h => h.key === headerKey)
+  if (!header?.sortable) return
+  
+  const currentSort = sortBy.value[0]
+  if (currentSort && currentSort.key === headerKey) {
+    currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = [{ key: headerKey, order: 'desc' }]
+  }
+  
+  const sort = sortBy.value[0]
+  if (sort) {
+    filterLocal.value.sortBy = sort.key
+    filterLocal.value.sortType = sort.order
+    router.replace({ path: route.path, query: filterLocal.value })
+  }
 }
 
 const getList = (name?: string) => {
@@ -372,27 +468,14 @@ const getList = (name?: string) => {
   return Array.isArray(listRef) ? listRef : []
 }
 
-const getRowClass = (context: { item: any; index: number }): string => {
-  const classes: string[] = []
+const getRowClass = (row: { item: any }) => {
+  const base = props.rowClass ? props.rowClass(row) : {}
   const isClickable = typeof props.rowClick === 'function'
-  
-  // Add hover styles
-  classes.push('hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors')
-  
-  // Add clickable cursor
-  if (isClickable) {
-    classes.push('cursor-pointer')
+  return {
+    ...base,
+    'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors': true,
+    'cursor-pointer': isClickable,
   }
-  
-  // Add custom row classes from props
-  if (props.rowClass) {
-    const customClass = props.rowClass(context)
-    if (typeof customClass === 'string') {
-      classes.push(customClass)
-    }
-  }
-  
-  return classes.join(' ')
 }
 
 const handleRowClick = (item: any) => {
