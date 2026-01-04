@@ -15,15 +15,19 @@ interface Props {
   disabled?: boolean;
   required?: boolean;
   id?: string;
+  size?: 'sm' | 'md' | 'lg';
+  clearable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   options: () => [],
-  placeholder: "Select an option",
+  placeholder: "Pilih...",
   searchable: false,
   disabled: false,
   required: false,
+  size: 'md',
+  clearable: false,
 });
 
 const emit = defineEmits<{
@@ -50,6 +54,16 @@ onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
 });
 
+// Size classes
+const sizeClasses = computed(() => {
+  const sizes: Record<string, string> = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-4 py-3 text-base',
+  };
+  return sizes[props.size] || sizes.md;
+});
+
 // Filtered options based on search
 const filteredOptions = computed(() => {
   if (!props.searchable || !searchQuery.value) {
@@ -72,11 +86,22 @@ const displayText = computed(() => {
   return props.placeholder;
 });
 
+// Check if has value
+const hasValue = computed(() => {
+  return props.modelValue !== null && props.modelValue !== undefined && props.modelValue !== '';
+});
+
 const handleSelect = (option: Option) => {
   emit("update:modelValue", option.value);
   emit("change", option);
   isOpen.value = false;
   searchQuery.value = "";
+};
+
+const handleClear = (event: MouseEvent) => {
+  event.stopPropagation();
+  emit("update:modelValue", null);
+  emit("change", null);
 };
 
 const toggleDropdown = () => {
@@ -109,25 +134,39 @@ const toggleDropdown = () => {
         @click="toggleDropdown"
         :disabled="disabled"
         :class="[
-          'w-full flex items-center justify-between px-4 py-3 rounded-xl border bg-white dark:bg-slate-800 text-left transition-all duration-200',
+          'w-full flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-left transition-all duration-200',
+          sizeClasses,
           error
             ? 'border-red-500 focus:ring-red-500/20'
             : 'border-slate-200 dark:border-slate-600 focus:ring-primary-500/20 focus:border-primary-500',
           disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-500',
           selectedOption ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500',
+          clearable && hasValue ? 'pr-16' : 'pr-10',
         ]"
       >
         <span class="truncate block">{{ displayText }}</span>
-        <svg
-          class="w-5 h-5 text-slate-400 transition-transform duration-200"
-          :class="{ 'rotate-180': isOpen }"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <!-- Clear button -->
+          <button
+            v-if="clearable && hasValue"
+            type="button"
+            class="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            @click="handleClear"
+          >
+            <i class="mdi mdi-close text-base" />
+          </button>
+          <!-- Chevron -->
+          <svg
+            class="w-5 h-5 text-slate-400 transition-transform duration-200"
+            :class="{ 'rotate-180': isOpen }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </button>
 
       <!-- Dropdown Menu -->
@@ -141,7 +180,7 @@ const toggleDropdown = () => {
       >
         <div
           v-if="isOpen"
-          class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 max-h-60 overflow-hidden flex flex-col"
+          class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 max-h-60 overflow-hidden flex flex-col"
         >
           <!-- Search Input -->
           <div v-if="searchable" class="p-2 border-b border-slate-100 dark:border-slate-700">
@@ -149,7 +188,7 @@ const toggleDropdown = () => {
               v-model="searchQuery"
               type="text"
               class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-slate-900 dark:text-white placeholder:text-slate-400"
-              placeholder="Search..."
+              placeholder="Cari..."
               @click.stop
             />
           </div>
@@ -157,7 +196,7 @@ const toggleDropdown = () => {
           <!-- Options List -->
           <ul class="flex-1 overflow-y-auto py-1">
             <li v-if="filteredOptions.length === 0" class="px-4 py-3 text-sm text-slate-500 text-center">
-              No options found
+              Tidak ditemukan
             </li>
             <li
               v-for="option in filteredOptions"

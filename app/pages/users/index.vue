@@ -12,7 +12,7 @@
       :headers="headers"
       :tableData="tableData"
       :loading="isLoading"
-      
+      :filterSchema="filterSchema"
       :filterList="{statusOptions}"
       :actions="actions"
       :actionToolbars="actionToolbars"
@@ -20,7 +20,6 @@
       @addItem="handleAddUser"
       @editItem="handleEditUser"
       @deleteItem="handleDelete"
-      :filterSchema="filterSchema"
     >
       <template #item.status="{ value }">
         <UiBadge :variant="getStatusVariant(value)">{{ value }}</UiBadge>
@@ -134,6 +133,65 @@ const breadcrumbs = ref([
   { label: 'Master Data' },
   { label: 'Users' },
 ]);
+
+
+const headers = [
+  { key: 'name', title: 'Nama', sortable: true },
+  { key: 'email', title: 'Email', sortable: true },
+  { key: 'status', title: 'Status', align: 'center' },
+  { key: 'actions', title: 'Aksi', align: 'center', width: '10%' },
+]
+const filterSchema = [
+  { name: 'status', type: 'select' as const, label: '', items: 'statusOptions', placeholder: 'Pilih status', colMd: 2 },
+  {
+    name: '',
+    type: 'text' as const,
+    colMd: 6,
+  },
+  { name: 'q', type: 'search' as const, placeholder: 'Cari...', colMd: 4 },
+]
+const actions = [
+  { key: 'edit', icon: 'mdi-pencil', color: '#f59e0b', tooltip: 'Edit', emit: 'editItem' },
+  { key: 'delete', icon: 'mdi-delete', color: '#ef4444', tooltip: 'Hapus', emit: 'deleteItem' },
+]
+const actionToolbars = [
+  {
+    key: "addItem",
+    icon: "mdi-plus-circle-outline",
+    color: "white",
+    tooltip: "Tambah",
+    emit: "addItem",
+    // type: "default",
+  },
+  {
+    key: "exportPdf",
+    icon: "mdi-file-pdf-box",
+    color: "white",
+    tooltip: "Export PDF",
+    emit: "exportPdf",
+  },
+  {
+    key: "exportExcel",
+    icon: "mdi-file-excel",
+    color: "white",
+    tooltip: "Export Excel",
+    emit: "exportExcel",
+  },
+  {
+    key: "importPo",
+    icon: "mdi-file-import",
+    color: "white",
+    tooltip: "Import PO",
+    emit: "importItem",
+  },
+  {
+    key: "addPo",
+    icon: "mdi-plus-circle",
+    color: "white",
+    tooltip: "Tambah",
+    emit: "addItem",
+  },
+];
 
 // Service instance
 const service = userService();
@@ -290,63 +348,4 @@ const handleDelete = async (row: any) => {
         }
     }
 };
-
-const headers = [
-  { key: 'name', title: 'Nama', sortable: true },
-  { key: 'email', title: 'Email', sortable: true },
-  { key: 'status', title: 'Status', align: 'center' },
-  { key: 'actions', title: 'Aksi', align: 'center', width: '10%' },
-]
-const filterSchema = [
-  { name: 'status', type: 'select' as const, label: '', items: 'statusOptions', placeholder: 'Pilih status', colMd: 2 },
-  {
-    name: '',
-    type: 'text' as const,
-    colMd: 6,
-  },
-  { name: 'q', type: 'search' as const, placeholder: 'Cari...', colMd: 4 },
-]
-const actions = [
-  { key: 'edit', icon: 'mdi-pencil', color: '#f59e0b', tooltip: 'Edit', emit: 'editItem' },
-  { key: 'delete', icon: 'mdi-delete', color: '#ef4444', tooltip: 'Hapus', emit: 'deleteItem' },
-]
-const actionToolbars = [
-  {
-    key: "addItem",
-    icon: "mdi-plus-circle-outline",
-    color: "white",
-    tooltip: "Tambah",
-    emit: "addItem",
-    // type: "default",
-  },
-  {
-    key: "exportPdf",
-    icon: "mdi-file-pdf-box",
-    color: "white",
-    tooltip: "Export PDF",
-    emit: "exportPdf",
-  },
-  {
-    key: "exportExcel",
-    icon: "mdi-file-excel",
-    color: "white",
-    tooltip: "Export Excel",
-    emit: "exportExcel",
-  },
-  {
-    key: "importPo",
-    icon: "mdi-file-import",
-    color: "white",
-    tooltip: "Import PO",
-    emit: "importItem",
-  },
-  {
-    key: "addPo",
-    icon: "mdi-plus-circle",
-    color: "white",
-    tooltip: "Tambah",
-    emit: "addItem",
-  },
-];
-
 </script>
