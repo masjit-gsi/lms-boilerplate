@@ -1,6 +1,5 @@
 <template>
   <div class="w-full space-y-4 animate-fade-in">
-    <!-- Breadcrumb -->
     <LayoutBreadcrumb
       :items="breadcrumbs"
     />
@@ -13,87 +12,81 @@
       :tableData="tableData"
       :loading="isLoading"
       :filterSchema="filterSchema"
-      :filterList="{statusOptions}"
+      :filterList="{listRole, statusOptions}"
       :actions="actions"
       :actionToolbars="actionToolbars"
       @fetchData="loadAll"
-      @addItem="handleAddUser"
-      @editItem="handleEditUser"
-      @deleteItem="handleDelete"
+      @addItem="addItem"
+      @editItem="editItem"
+      @deleteItem="deleteItem"
     >
       <template #item.status="{ value }">
         <UiBadge :variant="getStatusVariant(value)">{{ value }}</UiBadge>
       </template>
     </TableList>
 
-    <!-- Add/Edit User Modal -->
     <UiModal 
       v-model="showModal" 
-      :title="isEditing ? 'Edit User' : 'Tambah User Baru'" 
+      :title="isEditing ? 'Edit User' : 'Tambah User'" 
       size="md"
     >
-      <div class="space-y-4">
-        <UiInput 
-          v-model="name"
-          v-bind="nameProps"
-          label="Nama Lengkap" 
-          placeholder="Masukkan nama lengkap" 
-          required 
-          :error="errors.name"
-        />
+      <UiForm ref="formRef">
+        <div class="space-y-4">
+          <UiAutocomplete 
+              v-model="editedItem.roleId"
+              label="Role" 
+              placeholder="Pilih role" 
+              :options="listRole"
+              item-value="id"
+              item-title="name"
+              required
+              :rules="[v => !!v || 'Role wajib dipilih']"
+          />
 
-        <UiInput 
-          v-model="username"
-          v-bind="usernameProps"
-          label="Username" 
-          placeholder="Masukkan username" 
-          required 
-          :error="errors.username"
-        />
-        
-        <UiInput 
-          v-model="email"
-          v-bind="emailProps"
-          label="Email" 
-          type="email" 
-          placeholder="Masukkan email" 
-          required 
-          :error="errors.email"
-        />
+          <UiInput 
+            v-model="editedItem.name"
+            label="Nama" 
+            placeholder="Masukkan nama" 
+            required 
+            :rules="[v => !!v || 'Nama wajib diisi']"
+          />
 
-        <UiInput 
-          v-model="password"
-          v-bind="passwordProps"
-          label="Password" 
-          type="password" 
-          placeholder="Masukkan password" 
-          :required="!isEditing"
-          :error="errors.password"
-        />
-        
-        <UiSelect 
-            v-model="role"
-            v-bind="roleProps"
-            label="Role" 
-            placeholder="Pilih role" 
-            :options="roleOptions"
-            required
-            searchable
-            :error="errors.role"
-        />
+          <UiInput 
+            v-model="editedItem.username"
+            label="Username" 
+            placeholder="Masukkan username" 
+            required 
+            :rules="[
+              v => !!v || 'Username wajib diisi',
+              v => (v && v.length >= 3) || 'Username minimal 3 karakter'
+            ]"
+          />
+          
+          <UiInput 
+            v-model="editedItem.email"
+            label="Email" 
+            type="email" 
+            placeholder="Masukkan email" 
+            required 
+            :rules="[
+              v => !!v || 'Email wajib diisi',
+              v => /.+@.+\..+/.test(v) || 'Format email tidak valid'
+            ]"
+          />
 
-        <UiSelect 
-            v-if="isEditing"
-            v-model="status" 
-            v-bind="statusProps"
-            label="Status" 
-            placeholder="Pilih status" 
-            :options="statusOptions"
-        />
-      </div>
+          <UiInput 
+            v-model="editedItem.password"
+            label="Password" 
+            type="password" 
+            placeholder="Masukkan password" 
+            :required="!isEditing"
+            :rules="passwordRules"
+          />
+        </div>
+      </UiForm>
       <template #footer>
-        <UiButton variant="secondary" @click="showModal = false">Batal</UiButton>
-        <UiButton variant="primary" :loading="loading" @click="onSubmit">
+        <UiButton color="secondary" @click="showModal = false">Batal</UiButton>
+        <UiButton color="primary" :loading="loading" @click="onSubmit">
           {{ isEditing ? 'Simpan Perubahan' : 'Simpan' }}
         </UiButton>
       </template>
@@ -102,10 +95,8 @@
 </template>
 
 <script setup lang="ts">
-import { useForm } from "vee-validate";
-import { toTypedSchema } from "@vee-validate/zod";
-import * as z from "zod";
 import userService from "~/services/user.service";
+import roleService from "~/services/role.service";
 
 definePageMeta({
   layout: "default",
@@ -115,7 +106,11 @@ useHead({
   title: "Users | Admin Dashboard",
 });
 
+const swal = useSwal();
 const route = useRoute();
+const userSvc = userService();
+const roleSvc = roleService();
+
 const isLoading: any = ref(false);
 const itemPerPage = ref(10);
 const showModal = ref(false);
@@ -128,12 +123,13 @@ const tableData: any = ref({
     totalItems: 0,
   },
 });
+const listRole: any = ref([]);
+
 const breadcrumbs = ref([
   { label: 'Dashboard', to: '/' },
   { label: 'Master Data' },
   { label: 'Users' },
 ]);
-
 
 const headers = [
   { key: 'name', title: 'Nama', sortable: true },
@@ -141,27 +137,47 @@ const headers = [
   { key: 'status', title: 'Status', align: 'center' },
   { key: 'actions', title: 'Aksi', align: 'center', width: '10%' },
 ]
+
 const filterSchema = [
-  { name: 'status', type: 'select' as const, label: '', items: 'statusOptions', placeholder: 'Pilih status', colMd: 2 },
+  { name: 'status', 
+    type: 'select' as const, 
+    label: '', 
+    items: 'statusOptions', 
+    placeholder: 'Pilih status', 
+    colMd: 2,
+    valueKey: "id",
+    textKey: "name",
+  },
+  { name: 'roleId', 
+    type: 'autocomplete' as const, 
+    label: '', 
+    items: 'listRole', 
+    placeholder: 'Pilih role', 
+    colMd: 2,
+    valueKey: "id",
+    textKey: "name",
+  },
   {
     name: '',
     type: 'text' as const,
-    colMd: 6,
+    colMd: 4,
   },
   { name: 'q', type: 'search' as const, placeholder: 'Cari...', colMd: 4 },
 ]
+
 const actions = [
   { key: 'edit', icon: 'mdi-pencil', color: '#f59e0b', tooltip: 'Edit', emit: 'editItem' },
   { key: 'delete', icon: 'mdi-delete', color: '#ef4444', tooltip: 'Hapus', emit: 'deleteItem' },
 ]
+
 const actionToolbars = [
   {
     key: "addItem",
     icon: "mdi-plus-circle-outline",
-    color: "white",
+    color: "primary",
     tooltip: "Tambah",
     emit: "addItem",
-    // type: "default",
+    type: "default" as const,
   },
   {
     key: "exportPdf",
@@ -184,69 +200,48 @@ const actionToolbars = [
     tooltip: "Import PO",
     emit: "importItem",
   },
-  {
-    key: "addPo",
-    icon: "mdi-plus-circle",
-    color: "white",
-    tooltip: "Tambah",
-    emit: "addItem",
-  },
 ];
 
-// Service instance
-const service = userService();
+const formRef = ref<{ validate: () => Promise<boolean>; reset: () => void; resetValidation: () => void } | null>(null);
 
-// Define Zod Schema
-const userSchema = toTypedSchema(
-  z.object({
-    name: z.string().min(1, "Full Name is required"),
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().min(1, "Email is required").email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal('')),
-    role: z.string().min(1, "Role is required"),
-    status: z.string().optional(),
-  }).refine((data) => {
-    // Password required for new users
-    if (!editingId.value && (!data.password || data.password.length < 6)) {
-      return false;
-    }
-    return true;
-  }, {
-    message: "Password is required for new users",
-    path: ["password"],
-  })
-);
+// Default item
+const defaultItem = {
+  id: null,
+  name: '',
+  username: '',
+  email: '',
+  password: '',
+  roleId: null,
+  status: '1',
+};
+const editedItem:any = ref({ ...defaultItem });
 
-// Setup form with vee-validate
-const { handleSubmit, defineField, resetForm, errors } = useForm({
-  validationSchema: userSchema,
+const passwordRules = computed(() => {
+  if (isEditing.value) {
+    return [
+      (v: string) => !v || v.length >= 6 || 'Password minimal 6 karakter'
+    ];
+  }
+  return [
+    (v: string) => !!v || 'Password harus diisi',
+    (v: string) => (v && v.length >= 6) || 'Password minimal 6 karakter'
+  ];
 });
 
-// Define fields with props for v-model
-const [name, nameProps] = defineField("name");
-const [username, usernameProps] = defineField("username");
-const [email, emailProps] = defineField("email");
-const [password, passwordProps] = defineField("password");
-const [role, roleProps] = defineField("role");
-const [status, statusProps] = defineField("status");
-
-const filters = reactive({
-  search: "",
-  role: null,
-  status: null,
-  date: null
+onMounted(() => {
+    loadAllRole();
 });
 
 async function loadAll() {
-  const { pageNumber, pageSize, q, sortBy, sortType, idRole} = route.query;
+  const { pageNumber, pageSize, q, sortBy, sortType, roleId} = route.query;
   isLoading.value = true;
-  await service.retrieve({
+  await userSvc.retrieve({
       q: q,
       pageSize: pageSize ? pageSize : itemPerPage.value,
       pageNumber: pageNumber ? pageNumber : 1,
       sortBy: sortBy,
       sortType: sortType,
-      roleId: idRole,
+      roleId: roleId,
     })
     .then((res: any) => {
       isLoading.value = false;
@@ -257,76 +252,57 @@ async function loadAll() {
     });
 }
 
-onMounted(() => {
-    // loadAll();
-});
+async function loadAllRole() {
+  await roleSvc.retrieveAll({})
+    .then((res: any) => {
+      listRole.value = res.data;
+    });
+}
 
-const handleAddUser = () => {
+function addItem() {
   isEditing.value = false;
   editingId.value = undefined;
-  resetForm({
-    values: {
-      name: "",
-      username: "",
-      email: "",
-      password: "",
-      role: "", 
-      status: "active",
-    },
-  });
+  editedItem.value = { ...defaultItem };
+  formRef.value?.reset();
   showModal.value = true;
 };
 
-const handleEditUser = (user: any) => {
-  isEditing.value = true;
-  editingId.value = user.id;
-  resetForm({
-    values: {
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      password: "", // Leave empty for edit unless changing
-      role: user.roleId || user.role, // Map roleId
-      status: user.status,
-    },
-  });
-  showModal.value = true;
+async function editItem(user: any) {
+  formRef.value?.resetValidation();
+  await userSvc.retrieveById(user.id)
+    .then((res: any) => {
+      if (res.data.id) {
+        editedItem.value = res.data;  
+        editedItem.value.password = null;
+        isEditing.value = true;
+        editingId.value = user.id;
+        showModal.value = true;
+      }
+    });
 };
 
-const onSubmit = handleSubmit(async (values) => {
-  loading.value = true;
+const onSubmit = async () => {
+  const isValid = await formRef.value?.validate();
+  if (!isValid) return;
   
-  try {
-      const payload = {
-          ...values,
-          id: editingId.value,
-          roleId: values.role, // Map role to roleId
-          active: values.status === 'active', // Map status to active boolean
-          // Only send password if provided
-          ...(values.password ? { password: values.password } : {}),
-      };
-
-      await service.save(payload);
-      
-      await loadAll(); // Refresh list
-      showModal.value = false;
-  } catch (error) {
-      console.error("Failed to save user", error);
-  } finally {
-      loading.value = false;
-  }
-});
-
-const roleOptions = [
-  { label: "Administrator", value: "Admin" },
-  { label: "Content Editor", value: "Editor" },
-  { label: "Standard User", value: "User" },
-];
+  loading.value = true;
+  editedItem.value.status = "1";
+  userSvc.save(editedItem.value)
+  .then((res: any) => {
+    swal.toast(isEditing.value ? 'Data berhasil diperbarui' : 'Data berhasil ditambahkan', 'success');
+    showModal.value = false;
+    loadAll();
+  })
+  .catch((err: any) => {
+    loading.value = false;
+    console.error("Failed to save user", err);
+  });
+};
 
 const statusOptions = [
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
-  { label: "Pending", value: "pending" },
+  { name: "Active", id: "active" },
+  { name: "Inactive", id: "inactive" },
+  { name: "Pending", id: "pending" },
 ];
 
 const getStatusVariant = (status: string) => {
@@ -338,14 +314,21 @@ const getStatusVariant = (status: string) => {
   return variants[status] || "default";
 };
 
-const handleDelete = async (row: any) => {
-  if (confirm("Are you sure you want to delete this user?")) {
-        try {
-            await service.destroy(row.id);
-            await loadAll();
-        } catch (error) {
-            console.error("Failed to delete user", error);
-        }
+
+const deleteItem = async (row: any) => {
+  const result = await swal.confirmDelete(row.name);
+  if (result.isConfirmed) {
+    try {
+      swal.loading('Menghapus data...');
+      await userSvc.destroy(row.id);
+      swal.closeLoading();
+      swal.toast('Data berhasil dihapus', 'success');
+      await loadAll();
+    } catch (error) {
+      swal.closeLoading();
+      swal.error('Gagal', 'Terjadi kesalahan saat menghapus data');
+      console.error("Failed to delete user", error);
     }
+  }
 };
 </script>

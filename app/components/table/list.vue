@@ -28,7 +28,7 @@
 
     <div class="p-6">
       <!-- Filters -->
-      <div v-if="filterSchema.length > 0" class="grid grid-cols-12 gap-4 mb-6">
+      <div v-if="filterSchema.length > 0" class="grid grid-cols-12 gap-4 mb-5">
         <template v-for="f in filterSchema" :key="f.name">
           <div 
             class="col-span-12"
@@ -36,31 +36,9 @@
               gridColumn: `span ${f.colMd || 2} / span ${f.colMd || 2}` 
             }"
             :class="{ 'md:col-span-2': !f.colMd }"
-          >
-            <!-- Search filter with add button beside it -->
-            <div v-if="f.type === 'search' && addAction" class="flex items-center gap-2">
-              <div class="flex-1">
-                <component
-                  :is="componentResolver(f.type)"
-                  v-model="filterLocal[f.name]"
-                  :field="f"
-                  :disabled="isDisabled(f)"
-                  :items="getList(f.items)"
-                  @apply="handleApplyFilterField(f)"
-                />
-              </div>
-              <button
-                class="w-10 h-10 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors shrink-0"
-                @click="$emit(addAction.emit as any)"
-                :title="addAction.tooltip"
-              >
-                <UiIcon name="mdi-plus" size="xl" />
-              </button>
-            </div>
-            
+          > 
             <!-- Other filters -->
             <component
-              v-else
               :is="componentResolver(f.type)"
               v-model="filterLocal[f.name]"
               :field="f"
@@ -68,6 +46,18 @@
               :items="getList(f.items)"
               @apply="handleApplyFilterField(f)"
             >
+              <template v-if="f.type === 'search' && addAction" #append>  
+                <UiIconButton
+                  :icon="addAction.icon || 'mdi-plus'"
+                  :tooltip="addAction.tooltip"
+                  :color="addAction.color || 'primary'"
+                  variant="ghost"
+                  rounded="full"
+                  size="xl"
+                  @click="$emit(addAction.emit as any)"
+                />
+              </template>
+
               <template v-if="f.type === 'custom' && f.slotKey" #default>
                 <slot :name="f.slotKey" />
               </template>
@@ -129,7 +119,7 @@
           </select>
           <span>Dari {{ tableData.meta.totalItems }} data</span>
         </div>
-        <TablePagination
+        <UiPagination
           :current-page="Number(filterLocal.pageNumber) || 1"
           :total-items="tableData.meta.totalItems"
           :items-per-page="itemsPerPage"
@@ -428,10 +418,16 @@ onMounted(() => {
     Object.keys(q).forEach((k) => {
       if (k in filterLocal.value) {
         const schemaField = props.filterSchema.find((f) => f.name === k)
+        const value = q[k]
+        
+        // Convert to number for number type, autocomplete, and select if value is numeric
         if (schemaField?.type === 'number') {
-          filterLocal.value[k] = Number(q[k])
+          filterLocal.value[k] = Number(value)
+        } else if ((schemaField?.type === 'autocomplete' || schemaField?.type === 'select') && value) {
+          // Check if value is numeric string - convert to number to match option ids
+          filterLocal.value[k] = !isNaN(Number(value)) ? Number(value) : value
         } else {
-          filterLocal.value[k] = q[k]
+          filterLocal.value[k] = value
         }
       }
     })

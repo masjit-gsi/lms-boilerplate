@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * UiSelect - Hybrid Vuetify-style + vee-validate select
+ * UiAutocomplete - Hybrid Vuetify-style + vee-validate autocomplete
  */
 import { useField } from 'vee-validate';
 
@@ -12,7 +12,6 @@ interface Props {
   options?: any[];
   label?: string;
   placeholder?: string;
-  searchable?: boolean;
   disabled?: boolean;
   required?: boolean;
   id?: string;
@@ -26,8 +25,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   options: () => [],
-  placeholder: "Pilih...",
-  searchable: false,
+  placeholder: "Cari...",
   disabled: false,
   required: false,
   size: 'md',
@@ -40,16 +38,18 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   "update:modelValue": [value: string | number | null];
   "change": [option: any | null];
+  "search": [query: string];
 }>();
 
 const isOpen = ref(false);
 const searchQuery = ref("");
 const wrapperRef = ref<HTMLElement | null>(null);
+const inputRef = ref<HTMLInputElement | null>(null);
 
 // Stable field name
 const generatedId = useId();
-const selectId = computed(() => props.id || `select-${generatedId}`);
-const fieldName = props.name || `select-${generatedId}`;
+const autocompleteId = computed(() => props.id || `autocomplete-${generatedId}`);
+const fieldName = props.name || `autocomplete-${generatedId}`;
 
 // Validation function
 const validateWithRules = (value: any): boolean | string => {
@@ -90,10 +90,13 @@ watch(fieldValue, (newVal) => {
   }
 });
 
-// Click outside handler
+// Click outside - close and validate
 const handleClickOutside = (event: MouseEvent) => {
   if (wrapperRef.value && !wrapperRef.value.contains(event.target as Node)) {
-    isOpen.value = false;
+    if (isOpen.value) {
+      isOpen.value = false;
+      veeHandleBlur(new Event('blur'));
+    }
   }
 };
 
@@ -103,16 +106,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside, true);
-});
-
-// Size classes
-const sizeClasses = computed(() => {
-  const sizes: Record<string, string> = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2.5 text-sm',
-    lg: 'px-4 py-3 text-base',
-  };
-  return sizes[props.size] || sizes.md;
 });
 
 // Helpers
@@ -132,13 +125,25 @@ const getItemTitle = (option: any) => {
 
 // Filtered options
 const filteredOptions = computed(() => {
-  if (!props.searchable || !searchQuery.value) {
+  if (!searchQuery.value) return props.options;
+  
+  if (selectedOption.value && searchQuery.value === getItemTitle(selectedOption.value)) {
     return props.options;
   }
+  
   const query = searchQuery.value.toLowerCase();
   return props.options.filter((option) =>
     getItemTitle(option).toLowerCase().includes(query)
   );
+});
+
+// Scroll to selected on open
+watch(isOpen, async (val) => {
+  if (val && fieldValue.value) {
+    await nextTick();
+    const selectedButton = wrapperRef.value?.querySelector('button[data-selected="true"]');
+    selectedButton?.scrollIntoView({ block: 'nearest' });
+  }
 });
 
 // Selected option
@@ -146,52 +151,70 @@ const selectedOption = computed(() => {
   return props.options.find((opt) => getItemValue(opt) === fieldValue.value) || null;
 });
 
-const displayText = computed(() => {
-  if (selectedOption.value) return getItemTitle(selectedOption.value);
-  return props.placeholder;
-});
+// Sync search query with selected value - watch both fieldValue and options
+watch([() => fieldValue.value, () => props.options], ([newVal, options]) => {
+  if (newVal && options.length > 0) {
+    const selected = options.find((opt: any) => getItemValue(opt) === newVal);
+    if (selected) {
+      searchQuery.value = getItemTitle(selected);
+    }
+  } else if (!newVal) {
+    searchQuery.value = "";
+  }
+}, { immediate: true });
 
-const hasValue = computed(() => {
-  return fieldValue.value !== null && fieldValue.value !== undefined && fieldValue.value !== '';
-});
+const handleInput = (event: Event) => {
+  const query = (event.target as HTMLInputElement).value;
+  searchQuery.value = query;
+  isOpen.value = true;
+  emit("search", query);
+  
+  if (query === '' && fieldValue.value) {
+    fieldValue.value = null;
+    emit("update:modelValue", null);
+    nextTick(() => {
+      emit("change", null);
+    });
+  }
+};
 
 const handleSelect = (option: any) => {
   const value = getItemValue(option);
   fieldValue.value = value;
+  // Emit modelValue update FIRST (synchronous)
   emit("update:modelValue", value);
+  // Then emit change after a tick to ensure parent gets the value
   nextTick(() => {
     emit("change", option);
   });
   isOpen.value = false;
-  searchQuery.value = "";
+  searchQuery.value = getItemTitle(option);
 };
 
-const handleClear = (event: MouseEvent) => {
-  event.stopPropagation();
+const handleClear = () => {
   fieldValue.value = null;
   emit("update:modelValue", null);
   nextTick(() => {
     emit("change", null);
   });
+  searchQuery.value = "";
 };
 
-const toggleDropdown = () => {
-  if (props.disabled) return;
-  
-  // Validate on close (blur-like)
-  if (isOpen.value) {
-    veeHandleBlur(new Event('blur'));
-  }
-  
-  isOpen.value = !isOpen.value;
-  
-  if (isOpen.value && props.searchable) {
-    setTimeout(() => {
-      const searchInput = wrapperRef.value?.querySelector("input");
-      searchInput?.focus();
-    }, 50);
+const handleFocus = () => {
+  if (!props.disabled) {
+    isOpen.value = true;
   }
 };
+
+// Size classes
+const sizeClasses = computed(() => {
+  const sizes: Record<string, string> = {
+    sm: 'px-3 py-1.5 text-sm',
+    md: 'px-4 py-2.5 text-sm',
+    lg: 'px-4 py-3 text-base',
+  };
+  return sizes[props.size] || sizes.md;
+});
 
 // Form context
 const formContext = inject<{
@@ -211,41 +234,45 @@ defineExpose({ validate: validateField, reset: resetField, meta });
     </label>
 
     <div class="relative">
-      <button
-        type="button"
-        @click="toggleDropdown"
-        :disabled="isDisabled"
-        :class="[
-          'w-full flex items-center justify-between rounded-lg border bg-white dark:bg-slate-800 text-left transition-all duration-200 focus:outline-none focus:ring-2',
-          sizeClasses,
-          // Error state - persistent red border
-          errorMessage
-            ? 'border-red-500 ring-red-500/20 focus:border-red-500 focus:ring-red-500/20'
-            : 'border-slate-300 dark:border-slate-600 focus:ring-primary-500/20 focus:border-primary-500',
-          isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-slate-400 dark:hover:border-slate-500',
-          selectedOption ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500',
-          clearable && hasValue ? 'pr-16' : 'pr-10',
-        ]"
-      >
-        <span class="truncate block">{{ displayText }}</span>
+      <div class="relative">
+        <input
+          ref="inputRef"
+          type="text"
+          :value="searchQuery"
+          :placeholder="placeholder"
+          :disabled="isDisabled"
+          :class="[
+            'w-full rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-white transition-colors focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed',
+            sizeClasses,
+            // Error state - persistent red border
+            errorMessage 
+              ? 'border-red-500 ring-red-500/20 focus:border-red-500 focus:ring-red-500/20' 
+              : 'border-slate-300 dark:border-slate-600 focus:border-primary-500 focus:ring-primary-500/20',
+            clearable && fieldValue ? 'pr-16' : 'pr-10'
+          ]"
+          @input="handleInput"
+          @focus="handleFocus"
+        />
+        
         <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
           <button
-            v-if="clearable && hasValue"
+            v-if="clearable && fieldValue"
             type="button"
             class="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
             @click="handleClear"
           >
             <i class="mdi mdi-close text-lg" />
           </button>
+          
           <svg
-            class="w-5 h-5 text-slate-400 transition-transform duration-200"
+            class="w-5 h-5 text-slate-400 transition-transform duration-200 pointer-events-none"
             :class="{ 'rotate-180': isOpen }"
             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-      </button>
+      </div>
 
       <Transition
         enter-active-class="transition duration-100 ease-out"
@@ -256,26 +283,14 @@ defineExpose({ validate: validateField, reset: resetField, meta });
         leave-to-class="transform scale-95 opacity-0"
       >
         <div
-          v-if="isOpen"
-          class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 max-h-60 overflow-hidden flex flex-col"
+          v-if="isOpen && filteredOptions.length > 0"
+          class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 max-h-60 overflow-y-auto"
         >
-          <div v-if="searchable" class="p-2 border-b border-slate-100 dark:border-slate-700">
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="w-full px-3 py-2 text-sm rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500/50 text-slate-900 dark:text-white placeholder:text-slate-400"
-              placeholder="Cari..."
-              @click.stop
-            />
-          </div>
-
-          <ul class="flex-1 overflow-y-auto py-1">
-            <li v-if="filteredOptions.length === 0" class="px-4 py-3 text-sm text-slate-500 text-center">
-              Tidak ditemukan
-            </li>
-            <li v-for="option in filteredOptions" :key="getItemValue(option)">
+          <ul class="py-1">
+            <li v-for="(option, index) in filteredOptions" :key="getItemValue(option) || index">
               <button
                 type="button"
+                :data-selected="fieldValue === getItemValue(option)"
                 @click="handleSelect(option)"
                 :class="[
                   'w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left',

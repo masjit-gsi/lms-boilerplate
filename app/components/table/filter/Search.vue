@@ -43,20 +43,24 @@ const localValue = computed({
     >
       {{ field.label }}
     </label>
-    <UiInput
-      v-model="localValue"
-      type="text"
-      :placeholder="field.placeholder || 'Cari...'"
-      :disabled="disabled"
-      :size="size"
-      clearable
-      @keydown="handleKeydown"
-      @clear="emit('apply')"
-    >
-      <template #suffix>
-        <i class="mdi mdi-magnify text-lg" />
-      </template>
-    </UiInput>
-    <slot name="append" />
+    <div class="flex gap-2 w-full">
+      <div class="flex-1 min-w-0">
+        <UiInput
+          v-model="localValue"
+          type="text"
+          :placeholder="field.placeholder || 'Cari...'"
+          :disabled="disabled"
+          :size="size"
+          clearable
+          @keydown="handleKeydown"
+          @clear="emit('apply')"
+        >
+          <template #suffix>
+            <i class="mdi mdi-magnify text-lg" />
+          </template>
+        </UiInput>
+      </div>
+      <slot name="append" />
+    </div>
   </div>
 </template>

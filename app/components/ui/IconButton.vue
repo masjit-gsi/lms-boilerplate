@@ -24,8 +24,8 @@ interface Props {
   tooltip?: string
   tooltipPosition?: 'top' | 'bottom' | 'left' | 'right'
   color?: string
-  variant?: 'filled' | 'ghost' | 'outline'
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  variant?: 'filled' | 'ghost' | 'outline' | 'elevated'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   rounded?: 'sm' | 'md' | 'lg' | 'full'
   disabled?: boolean
   loading?: boolean
@@ -73,14 +73,16 @@ const sizeClasses: Record<string, string> = {
   sm: 'w-7 h-7',
   md: 'w-8 h-8',
   lg: 'w-10 h-10',
+  xl: 'w-11 h-11',
 }
 
 // Icon size mapping
-const iconSizeMap: Record<string, 'xs' | 'sm' | 'md' | 'lg' | 'xl'> = {
+const iconSizeMap: Record<string, 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'> = {
   xs: 'sm',
   sm: 'md',
   md: 'lg',
   lg: 'xl',
+  xl: '2xl',
 }
 
 const iconSize = computed(() => iconSizeMap[props.size] || 'md')
@@ -91,6 +93,7 @@ const iconSizeClass = computed(() => {
     sm: 'w-3.5 h-3.5',
     md: 'w-4 h-4',
     lg: 'w-5 h-5',
+    xl: 'w-6 h-6',
   }
   return classes[props.size] || 'w-4 h-4'
 })
@@ -103,9 +106,9 @@ const roundedClasses: Record<string, string> = {
   full: 'rounded-full',
 }
 
-// Button style (for filled variant)
+// Button style (for filled/elevated variant)
 const buttonStyle = computed(() => {
-  if (props.variant === 'filled') {
+  if (props.variant === 'filled' || props.variant === 'elevated') {
     return { backgroundColor: getColor(props.color) }
   }
   if (props.variant === 'outline') {
@@ -130,6 +133,9 @@ const buttonClass = computed(() => {
   switch (props.variant) {
     case 'filled':
       base.push('text-white hover:opacity-80')
+      break
+    case 'elevated':
+      base.push('text-white shadow-lg hover:shadow-xl hover:opacity-80 active:shadow-md')
       break
     case 'outline':
       base.push('border-2 bg-transparent hover:bg-black/5 dark:hover:bg-white/10')

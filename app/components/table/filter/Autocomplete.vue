@@ -35,16 +35,7 @@ const emit = defineEmits<{
   'apply': []
 }>()
 
-const valueKey = computed(() => props.field.valueKey || 'value')
-const textKey = computed(() => props.field.textKey || 'label')
 
-// Transform items to UiSelect format (label, value)
-const transformedOptions = computed(() => {
-  return props.items.map(item => ({
-    label: String(item[textKey.value] || item.label || ''),
-    value: item[valueKey.value] ?? item.value,
-  }))
-})
 
 const handleChange = (option: { label: string; value: string | number } | null) => {
   emit('apply')
@@ -60,14 +51,15 @@ const handleChange = (option: { label: string; value: string | number } | null) 
       {{ field.label }}
     </label>
     
-    <UiSelect
+    <UiAutocomplete
       :model-value="modelValue"
-      :options="transformedOptions"
-      :placeholder="field.placeholder || 'Pilih...'"
+      :options="items"
+      :placeholder="field.placeholder || 'Cari...'"
       :disabled="disabled"
       :size="size"
       :clearable="clearable"
-      searchable
+      :item-value="field.valueKey || 'value'"
+      :item-title="field.textKey || 'label'"
       @update:model-value="emit('update:modelValue', $event)"
       @change="handleChange"
     />

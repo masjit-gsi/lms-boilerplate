@@ -35,16 +35,7 @@ const emit = defineEmits<{
   'apply': []
 }>()
 
-const valueKey = computed(() => props.field.valueKey || 'value')
-const textKey = computed(() => props.field.textKey || 'label')
 
-// Transform items to UiSelect format (label, value)
-const transformedOptions = computed(() => {
-  return props.items.map(item => ({
-    label: String(item[textKey.value] || item.label || ''),
-    value: item[valueKey.value] ?? item.value,
-  }))
-})
 
 const handleChange = () => {
   emit('apply')
@@ -62,11 +53,13 @@ const handleChange = () => {
     
     <UiSelect
       :model-value="modelValue"
-      :options="transformedOptions"
+      :options="items"
       :placeholder="field.placeholder || 'Pilih...'"
       :disabled="disabled"
       :size="size"
       :clearable="clearable"
+      :item-value="field.valueKey || 'value'"
+      :item-title="field.textKey || 'label'"
       @update:model-value="emit('update:modelValue', $event)"
       @change="handleChange"
     />
