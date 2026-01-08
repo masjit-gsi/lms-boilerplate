@@ -1,9 +1,12 @@
-import { useAuthStore } from "~/stores/auth";
+import { useAuthStore, TOKEN_COOKIE_NAME } from "~/stores/auth";
 
 export function useApi() {
     const authStore = useAuthStore();
     const router = useRouter();
     const toast = useToast();
+
+    // Use Nuxt's useCookie for SSR support - call it at composable level
+    const tokenCookie = useCookie(TOKEN_COOKIE_NAME);
 
     const api = $fetch.create({
         baseURL: "/api",
@@ -12,8 +15,11 @@ export function useApi() {
         },
         onRequest({ options }) {
             const headers = new Headers(options.headers);
-            if (authStore.token) {
-                headers.set("Authorization", `Bearer ${authStore.token}`);
+
+            // Get token from cookie (works in both SSR and client)
+            const token = tokenCookie.value || authStore.token;
+            if (token) {
+                headers.set("Authorization", `Bearer ${token}`);
             }
 
             options.headers = headers;
@@ -51,11 +57,16 @@ export function useApi() {
 export function useApiFetch<T>(endpoint: string) {
     // Keep this wrapper for SSR data fetching if needed, simpler version
     const authStore = useAuthStore();
+    // Use Nuxt's useCookie for SSR support
+    const tokenCookie = useCookie(TOKEN_COOKIE_NAME);
+
     return useFetch<T>(endpoint, {
         baseURL: "/api",
         onRequest({ options }) {
-            if (authStore.token) {
-                options.headers.set("Authorization", `Bearer ${authStore.token}`);
+            // Get token from cookie (works in both SSR and client)
+            const token = tokenCookie.value || authStore.token;
+            if (token) {
+                options.headers.set("Authorization", `Bearer ${token}`);
             }
         }
     });

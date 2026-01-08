@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-sm shadow-sm overflow-hidden">
+  <div :class="['bg-white dark:bg-slate-800 rounded-sm overflow-hidden', elevationClass]">
     <!-- Header Bar -->
-    <div :class="['flex flex-wrap items-center justify-between gap-3 px-5 py-1', headerClass]">
+    <div v-if="showHeader" :class="['flex flex-wrap items-center justify-between gap-3 px-5 py-1', headerClass]">
       <h2 class="text-lg font-semibold text-white">{{ title }}</h2>
       <div class="flex items-center gap-1">
         <template v-for="action in validActions(actionToolbars, {})" :key="action.key">
@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="p-6">
+    <div :class="contentPadding">
       <!-- Filters -->
       <div v-if="filterSchema.length > 0" class="grid grid-cols-12 gap-4 mb-5">
         <template v-for="f in filterSchema" :key="f.name">
@@ -181,6 +181,7 @@ interface TableData {
 interface Props {
   title?: string
   loading?: boolean
+  showHeader?: boolean
   headers: Header[]
   tableData: TableData
   filterSchema?: FilterField[]
@@ -192,11 +193,14 @@ interface Props {
   rowClick?: (item: any) => void
   defaultSortBy?: string
   headerTheme?: 'red' | 'blue' | 'green' | 'purple' | 'orange' | 'slate' | 'primary'
+  elevated?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+  contentPadding?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: '',
   loading: false,
+  showHeader: true,
   headers: () => [],
   tableData: () => ({ items: [], meta: { totalItems: 0 } }),
   filterSchema: () => [],
@@ -206,6 +210,8 @@ const props = withDefaults(defineProps<Props>(), {
   actionLoading: () => ({}),
   defaultSortBy: '',
   headerTheme: 'primary',
+  elevated: 'sm',
+  contentPadding: 'p-6',
 })
 
 // Header theme classes
@@ -221,6 +227,19 @@ const headerThemeClasses: Record<string, string> = {
 
 const headerClass = computed(() => {
   return headerThemeClasses[props.headerTheme] || headerThemeClasses.primary
+})
+
+// Elevation (shadow) classes
+const elevationClasses: Record<string, string> = {
+  none: '',
+  sm: 'shadow-sm',
+  md: 'shadow-md',
+  lg: 'shadow-lg',
+  xl: 'shadow-xl',
+}
+
+const elevationClass = computed(() => {
+  return elevationClasses[props.elevated] || ''
 })
 
 const emit = defineEmits<{

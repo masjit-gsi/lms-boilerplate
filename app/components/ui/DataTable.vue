@@ -6,7 +6,7 @@
           <!-- Row Number Column -->
           <th 
             v-if="showNumber"
-            class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-16 border-r border-slate-200 dark:border-slate-700"
+            class="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-16 border-r border-slate-200 dark:border-slate-700"
           >
             No.
           </th>
@@ -85,7 +85,7 @@
           <!-- Row Number -->
           <td 
             v-if="showNumber"
-            class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700"
+            class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 text-center"
           >
             {{ startNumber + index + 1 }}.
           </td>
