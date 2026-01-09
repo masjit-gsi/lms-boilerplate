@@ -29,7 +29,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: "default",
+  layout: "admin",
   permission: "MENU.VIEW",
 });
 

@@ -26,7 +26,7 @@ export function useApi() {
         },
         async onResponseError({ response }) {
             const status = response.status;
-            const error = response._data?.message || "An error occurred";
+            const error = response._data?.error || response._data?.message;
 
             if (status === 401) {
                 authStore.logout();

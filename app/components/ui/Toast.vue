@@ -32,7 +32,7 @@ const textColors = {
 
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-[100] flex flex-col gap-3 max-w-sm">
+    <div class="fixed top-4 right-4 z-[200] flex flex-col gap-3 max-w-sm">
       <TransitionGroup
         enter-active-class="transition-all duration-300 ease-out"
         enter-from-class="opacity-0 translate-x-full"

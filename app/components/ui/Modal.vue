@@ -2,25 +2,42 @@
 interface Props {
   modelValue: boolean;
   title?: string;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  persistent?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: "md",
+  persistent: false,
 });
 
 const emit = defineEmits<{
   "update:modelValue": [value: boolean];
+  "close": [];
 }>();
 
 const close = () => {
+  if (props.persistent) return;
   emit("update:modelValue", false);
+  emit("close");
 };
+
+// Force close (ignores persistent)
+const forceClose = () => {
+  emit("update:modelValue", false);
+  emit("close");
+};
+
+// Expose close methods to parent
+defineExpose({
+  close: forceClose,
+});
 
 const sizeClasses = {
   sm: "max-w-md",
   md: "max-w-lg",
   lg: "max-w-2xl",
+  xl: "max-w-4xl",
 };
 </script>
 
@@ -73,7 +90,7 @@ const sizeClasses = {
                 </slot>
                 <button
                   class="p-2 -m-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                  @click="close"
+                  @click="forceClose"
                 >
                   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -88,10 +105,12 @@ const sizeClasses = {
 
               <!-- Footer -->
               <div
-                v-if="$slots.footer"
+                v-if="$slots.footer || $slots.actions"
                 class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 dark:border-slate-700"
               >
-                <slot name="footer" />
+                <slot name="actions">
+                  <slot name="footer" />
+                </slot>
               </div>
             </div>
           </Transition>
@@ -100,3 +119,4 @@ const sizeClasses = {
     </Transition>
   </Teleport>
 </template>
+

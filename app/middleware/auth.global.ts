@@ -19,7 +19,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
         authStore.isAuthenticated = true;
     }
 
-    const publicRoutes = ["/login", "/register", "/forgot-password", "/logout"];
+    const publicRoutes = ["/login", "/login-v2", "/login-v3", "/register", "/forgot-password", "/logout"];
 
     // If user is already authenticated and trying to access login, redirect to dashboard
     const hasToken = !!authStore.token || !!tokenCookie.value;

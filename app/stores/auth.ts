@@ -84,13 +84,16 @@ export const useAuthStore = defineStore("auth", {
                     return { success: true };
                 }
 
-                throw new Error("Login failed: No token received");
-
+                // Return error if no token received
+                return {
+                    success: false,
+                    error: data.error || data.message || "Login gagal"
+                };
             } catch (error: any) {
                 this.logout();
                 return {
                     success: false,
-                    error: error.response?._data?.message || error.message || "Login failed"
+                    error: error.response?._data?.error || error.response?._data?.message || error.message || "Login gagal"
                 };
             } finally {
                 this.loading = false;

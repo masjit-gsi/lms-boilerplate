@@ -1,15 +1,247 @@
+<template>
+  <div class="min-h-screen flex">
+    <!-- Left Side - Illustration with Blue Gradient -->
+    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-50 dark:from-primary-950 dark:to-slate-900 relative overflow-hidden flex-col justify-center items-center p-12">
+      <!-- Decorative Circles -->
+      <div class="absolute -top-20 -right-20 w-60 h-60 bg-primary-300/30 dark:bg-primary-800/20 rounded-full"></div>
+      <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-primary-300/30 dark:bg-primary-800/20 rounded-full"></div>
+      
+      <!-- Image -->
+      <div class="relative z-10 mb-12">
+        <img 
+          src="/images/illustration-container.png" 
+          alt="Learning Illustration" 
+          class="w-full max-w-sm object-contain"
+        />
+      </div>
+      
+      <!-- Text Content Slider -->
+      <div class="relative z-10 text-center overflow-hidden">
+        <TransitionGroup
+          tag="div"
+          enter-active-class="transition-all duration-500 ease-out"
+          enter-from-class="opacity-0 translate-x-8"
+          enter-to-class="opacity-100 translate-x-0"
+          leave-active-class="transition-all duration-300 ease-in absolute inset-0"
+          leave-from-class="opacity-100 translate-x-0"
+          leave-to-class="opacity-0 -translate-x-8"
+        >
+          <div v-if="currentSlide === 0" key="slide-0">
+            <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-4">
+              Welcome to
+              <br />
+              <span class="text-primary-500">Greatclass</span> LMS.
+            </h1>
+            <p class="text-slate-600 font-medium dark:text-slate-400">
+              Platform designed to help organizations, educators, and learners manage learning activities.
+            </p>
+          </div>
+          <div v-else-if="currentSlide === 1" key="slide-1">
+            <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-4">
+              Learn Anywhere,
+              <br />
+              <span class="text-primary-500">Anytime</span>
+            </h1>
+            <p class="text-slate-600 font-medium dark:text-slate-400 ">
+              Akses materi pembelajaran kapan saja dan di mana saja dengan mudah.
+            </p>
+          </div>
+          <div v-else key="slide-2">
+            <h1 class="text-3xl font-bold text-slate-800 dark:text-white mb-4">
+              Track Your
+              <br />
+              <span class="text-primary-500">Progress</span>
+            </h1>
+            <p class="text-slate-600 font-medium dark:text-slate-400 ">
+              Pantau perkembangan belajar dengan laporan dan analitik yang lengkap.
+            </p>
+          </div>
+        </TransitionGroup>
+        
+        <!-- Pagination Dots -->
+        <div class="flex justify-center gap-2 mt-8">
+          <button
+            v-for="(_, index) in slides"
+            :key="index"
+            :class="[
+              'h-2 rounded-full transition-all duration-300',
+              currentSlide === index 
+                ? 'w-8 bg-primary-500' 
+                : 'w-2 bg-primary-200 dark:bg-primary-800 hover:bg-primary-300'
+            ]"
+            @click="goToSlide(index)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Form -->
+    <div class="w-full lg:w-1/2 flex flex-col bg-white dark:bg-slate-900">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 lg:p-8">
+        <!-- Logo -->
+        <div class="flex items-center gap-2">
+          <div class="pl-2 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+            <UiIcon name="mdi-school" class="w-6 h-6 text-white" />
+          </div>
+          <span class="text-xl font-bold text-slate-900 dark:text-white">Greatclass<sup class="text-xs text-primary-500">LMS</sup></span>
+        </div>
+        <!-- <a href="/" class="text-primary-500 hover:text-primary-600 text-sm font-medium underline">
+          Back to Home
+        </a> -->
+      </div>
+      
+      <!-- Form Container -->
+      <div class="flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-24 pb-12">
+        <div class="max-w-md w-full mx-auto">
+          <!-- Title -->
+          <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-8">Sign into Your Account</h2>
+
+          <!-- Form -->
+          <UiForm ref="formRef" class="space-y-5" @submit="handleSubmit">
+            <UiInput
+            v-model="form.username"
+            name="username"
+            type="text"
+            label="Username"
+            placeholder="Enter your username"
+            :rules="usernameRules"
+            size="lg"
+          >
+            <template #prefix>
+              <UiIcon name="mdi-email-outline" size="md" />
+            </template>
+          </UiInput>
+
+            <UiInput
+              v-model="form.password"
+              name="password"
+              :type="showPassword ? 'text' : 'password'"
+              label="Password"
+              placeholder="Enter your password"
+              :rules="passwordRules"
+              size="lg"
+            >
+              <template #prefix>
+                <UiIcon name="mdi-key-outline" size="md" />
+              </template>
+              <template #suffix>
+                <UiIconButton
+                  :icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  size="sm"
+                  variant="ghost"
+                  @click="showPassword = !showPassword"
+                />
+              </template>
+            </UiInput>
+
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <UiCheckbox v-model="form.remember" />
+                <span class="text-sm text-slate-600 dark:text-slate-400">Remember Me</span>
+              </label>
+              <a href="#" class="text-sm font-medium text-primary-500 hover:text-primary-600">
+                Forgot Password?
+              </a>
+            </div>
+
+            <UiButton
+              type="submit"
+              size="lg"
+              :loading="authStore.loading"
+              class="w-full !bg-primary-500 hover:!bg-primary-600 !border-primary-500"
+            >
+              Login
+            </UiButton>
+          </UiForm>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-4 my-6">
+            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+            <span class="text-sm text-slate-500 dark:text-slate-400">Or</span>
+            <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
+          </div>
+
+          <!-- Social Login -->
+          <div class="grid grid-cols-2 gap-4">
+            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <UiIcon name="mdi-google" class="w-5 h-5 text-red-500" />
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Google</span>
+            </button>
+            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <UiIcon name="mdi-facebook" class="w-5 h-5 text-blue-600" />
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Facebook</span>
+            </button>
+          </div>
+
+          <!-- Sign Up Link -->
+          <p class="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
+            Don't you have an account?
+            <a href="#" class="font-medium text-primary-500 hover:text-primary-600">
+              Sign up
+            </a>
+          </p>
+
+          <!-- Copyright -->
+        <p class="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
+          Copyright © 2026 by Your Company
+        </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { useAuthStore } from "~/stores/auth";
+import { useConfigStore } from "~/stores/config";
 
 definePageMeta({
-  layout: "auth",
+  layout: false,
 });
 
 useHead({
-  title: "Login | Admin Dashboard",
+  title: "Login | Greatclass LMS",
+});
+
+// Init theme
+const configStore = useConfigStore();
+onMounted(() => {
+  configStore.applyTheme();
+  configStore.applyPrimaryColor();
 });
 
 const authStore = useAuthStore();
+const swal = useSwal();
+const formRef = ref();
+const showPassword = ref(false);
+
+// Slider logic
+const slides = [0, 1, 2];
+const currentSlide = ref(0);
+let slideInterval: ReturnType<typeof setInterval>;
+
+const goToSlide = (index: number) => {
+  currentSlide.value = index;
+  resetInterval();
+};
+
+const nextSlide = () => {
+  currentSlide.value = (currentSlide.value + 1) % slides.length;
+};
+
+const resetInterval = () => {
+  clearInterval(slideInterval);
+  slideInterval = setInterval(nextSlide, 5000);
+};
+
+onMounted(() => {
+  slideInterval = setInterval(nextSlide, 5000);
+});
+
+onUnmounted(() => {
+  clearInterval(slideInterval);
+});
 
 const form = reactive({
   username: "",
@@ -17,109 +249,24 @@ const form = reactive({
   remember: false,
 });
 
-const error = ref("");
+// Validation rules
+const usernameRules = [
+  (v: string) => !!v || "Username wajib diisi",
+];
+
+const passwordRules = [
+  (v: string) => !!v || "Password wajib diisi",
+];
 
 const handleSubmit = async () => {
-  error.value = "";
+  const isValid = await formRef.value?.validate();
+  if (!isValid) return;
+
   const result = await authStore.login(form.username, form.password);
-  
   if (result.success) {
-    navigateTo("/");
+    navigateTo("/", { external: true });
   } else {
-    error.value = result.error || "Login failed. Please try again.";
+    swal.toast(result.error || "Login gagal. Silakan coba lagi.", "error");
   }
 };
 </script>
-
-<template>
-  <div class="animate-scale-in">
-    <UiCard class="backdrop-blur-xl bg-white/90 dark:bg-slate-900/90">
-      <!-- Logo -->
-      <div class="text-center mb-8">
-        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
-          <span class="text-white font-bold text-2xl">A</span>
-        </div>
-        <h1 class="mt-6 text-2xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
-        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Sign in to your account to continue
-        </p>
-      </div>
-
-      <!-- Error message -->
-      <div v-if="error" class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-        <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
-      </div>
-
-      <!-- Form -->
-      <form class="space-y-5" @submit.prevent="handleSubmit">
-        <UiInput
-          v-model="form.username"
-          type="text"
-          label="Username"
-          placeholder="your username"
-          required
-        >
-          <template #prefix>
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </template>
-        </UiInput>
-
-        <UiInput
-          v-model="form.password"
-          type="password"
-          label="Password"
-          placeholder="••••••••"
-          required
-        >
-          <template #prefix>
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </template>
-        </UiInput>
-
-        <div class="flex items-center justify-between">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              v-model="form.remember"
-              type="checkbox"
-              class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-0 dark:bg-slate-700"
-            />
-            <span class="text-sm text-slate-600 dark:text-slate-400">Remember me</span>
-          </label>
-          <a href="#" class="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
-            Forgot password?
-          </a>
-        </div>
-
-        <UiButton
-          type="submit"
-          variant="elevated"
-          color="primary"
-          size="lg"
-          :loading="authStore.loading"
-          class="w-full"
-        >
-          Sign in
-        </UiButton>
-      </form>
-
-      <!-- Footer -->
-      <div class="mt-6 text-center">
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-          Don't have an account?
-          <a href="#" class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
-            Sign up
-          </a>
-        </p>
-      </div>
-
-      <!-- Demo credentials -->
-      <div class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
-        <p class="text-xs text-center text-slate-400 dark:text-slate-500 mb-2">Demo: use any email & password</p>
-      </div>
-    </UiCard>
-  </div>
-</template>

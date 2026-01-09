@@ -29,6 +29,7 @@
       v-model="showModal" 
       :title="isEditing ? 'Edit User' : 'Tambah User'" 
       size="md"
+      persistent
     >
       <UiForm ref="formRef">
         <div class="space-y-4">
@@ -87,7 +88,7 @@
       <template #footer>
         <UiButton color="secondary" @click="showModal = false">Batal</UiButton>
         <UiButton color="primary" :loading="loading" @click="onSubmit">
-          {{ isEditing ? 'Simpan Perubahan' : 'Simpan' }}
+          Simpan
         </UiButton>
       </template>
     </UiModal>
@@ -99,7 +100,7 @@ import userService from "~/services/user.service";
 import roleService from "~/services/role.service";
 
 definePageMeta({
-  layout: "default",
+  layout: "admin",
   permission: "USER.VIEW",
 });
 
@@ -140,15 +141,6 @@ const headers = [
 ]
 
 const filterSchema = [
-  { name: 'status', 
-    type: 'select' as const, 
-    label: '', 
-    items: 'statusOptions', 
-    placeholder: 'Pilih status', 
-    colMd: 2,
-    valueKey: "id",
-    textKey: "name",
-  },
   { name: 'roleId', 
     type: 'autocomplete' as const, 
     label: '', 
@@ -161,7 +153,7 @@ const filterSchema = [
   {
     name: '',
     type: 'text' as const,
-    colMd: 4,
+    colMd: 6,
   },
   { name: 'q', type: 'search' as const, placeholder: 'Cari...', colMd: 4 },
 ]
@@ -292,6 +284,7 @@ const onSubmit = async () => {
   .then((res: any) => {
     swal.toast(isEditing.value ? 'Data berhasil diperbarui' : 'Data berhasil ditambahkan', 'success');
     showModal.value = false;
+    loading.value = false;
     loadAll();
   })
   .catch((err: any) => {
