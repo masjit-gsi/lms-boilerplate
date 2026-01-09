@@ -36,7 +36,7 @@ const typeIcons = {
     <template #header>
       <div class="flex items-center justify-between">
         <h3 class="font-semibold text-slate-900 dark:text-white">Recent Activity</h3>
-        <NuxtLink to="/activity" class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
+        <NuxtLink to="/" class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400">
           View all
         </NuxtLink>
       </div>

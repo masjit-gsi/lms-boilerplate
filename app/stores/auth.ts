@@ -196,6 +196,6 @@ export const useAuthStore = defineStore("auth", {
     persist: {
         key: "auth",
         storage: typeof window !== "undefined" ? localStorage : undefined,
-        pick: ["user", "isAuthenticated", "menus"],
+        pick: ["user", "isAuthenticated", "menus", "permissions"],
     },
 });

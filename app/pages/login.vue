@@ -96,7 +96,8 @@ const handleSubmit = async () => {
 
         <UiButton
           type="submit"
-          variant="primary"
+          variant="elevated"
+          color="primary"
           size="lg"
           :loading="authStore.loading"
           class="w-full"

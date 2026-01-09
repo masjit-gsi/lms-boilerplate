@@ -11,8 +11,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
 
     const authStore = useAuthStore();
-
-    // Use Nuxt's useCookie for SSR support
     const tokenCookie = useCookie(TOKEN_COOKIE_NAME);
 
     // Sync token from cookies to store if not already synced
@@ -21,35 +19,53 @@ export default defineNuxtRouteMiddleware(async (to) => {
         authStore.isAuthenticated = true;
     }
 
-    // Public routes that don't require authentication
-    const publicRoutes = ["/login", "/register", "/forgot-password"];
+    const publicRoutes = ["/login", "/register", "/forgot-password", "/logout"];
 
-    // Check if route requires authentication
-    if (!publicRoutes.includes(to.path)) {
-        // Check if user is authenticated (check both store and cookie)
-        const hasToken = !!authStore.token || !!tokenCookie.value;
-        const isAuthenticated = authStore.isAuthenticated && hasToken;
-
-        if (!isAuthenticated) {
-            // Redirect to login page
-            menusLoadedThisSession = false;
-            return navigateTo("/login");
-        }
-
-        // Load menus on first navigation of this session (after page refresh)
-        // This ensures menus are always fresh from API
-        if (authStore.user?.roleId && !menusLoadedThisSession) {
-            await authStore.loadAuthMenu({
-                roleId: authStore.user.roleId,
-            });
-            menusLoadedThisSession = true;
-        }
-    }
-
-    // If user is authenticated and trying to access login page, redirect to dashboard
+    // If user is already authenticated and trying to access login, redirect to dashboard
     const hasToken = !!authStore.token || !!tokenCookie.value;
     const isAuthenticated = authStore.isAuthenticated && hasToken;
+
     if (isAuthenticated && to.path === "/login") {
-        return navigateTo("/");
+        return navigateTo("/", { external: true });
+    }
+
+    if (publicRoutes.includes(to.path)) {
+        menusLoadedThisSession = false;
+        return;
+    }
+
+
+    if (!isAuthenticated) {
+        menusLoadedThisSession = false;
+        return navigateTo("/login", { external: true });
+    }
+
+    // Load menus on first navigation of this session (after page refresh or login)
+    // This ensures menus are always fresh from API
+    if (authStore.user?.roleId && !menusLoadedThisSession) {
+        await authStore.loadAuthMenu({
+            roleId: authStore.user.roleId,
+        });
+        menusLoadedThisSession = true;
+    }
+
+    // ============ RBAC Permission Check ============
+    // Check if route has permission requirement in meta
+    const requiredPermission = to.meta.permission as string | undefined;
+
+    if (requiredPermission) {
+        const permissions = authStore.permissions || [];
+        if (permissions.length === 0 && !menusLoadedThisSession) {
+            // Allow first navigation after login - permissions will be checked on next navigation
+            return;
+        }
+
+        const hasPermission = permissions.includes(requiredPermission);
+
+        if (!hasPermission) {
+            useSwal().toast("Anda tidak memiliki akses ke halaman ini", 'error');
+            return navigateTo("/logout");
+        }
     }
 });
+

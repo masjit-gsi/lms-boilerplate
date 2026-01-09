@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import { useAuthStore } from "~/stores/auth";
+import { useAuthStore, TOKEN_COOKIE_NAME } from "~/stores/auth";
 import { useConfigStore } from "~/stores/config";
 
 const authStore = useAuthStore();
 const configStore = useConfigStore();
 const { isCollapsed, isMobileOpen, closeMobile, toggle } = useSidebar();
-
-// Use local refs that sync with store after mount to avoid hydration issues
+const isReady = ref(false);
 const sidebarLayout = ref<"vertical" | "horizontal">("vertical");
 const sidebarCollapsed = ref(false);
 
-// Initialize config on mount (client-side only)
 onMounted(() => {
+  // Always init config for theme/layout settings
   configStore.initConfig();
-  // Sync local refs with store after hydration
+  
+  const tokenCookie = useCookie(TOKEN_COOKIE_NAME);
+  if (!tokenCookie.value && !authStore.isAuthenticated) {
+    // Not authenticated - let middleware handle redirect
+    // Still keep isReady false so loading shows
+    return;
+  }
+  
   sidebarLayout.value = configStore.sidebarLayout;
   sidebarCollapsed.value = configStore.sidebarCollapsed;
   
-  // Watch store changes
   watch(() => configStore.sidebarLayout, (val) => {
     sidebarLayout.value = val;
   });
   watch(() => configStore.sidebarCollapsed, (val) => {
     sidebarCollapsed.value = val;
   });
+  
+  nextTick(() => {
+    isReady.value = true;
+  });
 });
 
-// Handle logout
 const handleLogout = () => {
   authStore.logout();
   closeMobile();
@@ -36,19 +44,16 @@ const handleLogout = () => {
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
-    <!-- Sidebar -->
-    <LayoutSidebar />
-
-    <!-- Header -->
-    <LayoutHeader />
-
-    <!-- Settings Panel (FAB + Panel) -->
-    <LayoutSettingsPanel />
-
-    <!-- Toast Notifications -->
+    <!-- Loading overlay - covers ALL content while not ready -->
+    <UiPageLoading v-if="!isReady" class="fixed inset-0 z-[100]" />
+    
+    <!-- Always render layout components -->
+    <LayoutSidebar v-if="isReady" />
+    <LayoutHeader v-if="isReady" />
+    <LayoutSettingsPanel v-if="isReady" />
     <UiToast />
 
-    <!-- Main content -->
+    <!-- Main content - slot always renders to prevent NuxtPage warning -->
     <main
       :class="[
         'pt-16 min-h-screen transition-all duration-300 w-full',

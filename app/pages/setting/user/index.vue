@@ -100,6 +100,7 @@ import roleService from "~/services/role.service";
 
 definePageMeta({
   layout: "default",
+  permission: "USER.VIEW",
 });
 
 useHead({
