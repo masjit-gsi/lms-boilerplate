@@ -22,6 +22,42 @@ onMounted(() => {
   });
 });
 
+// Language switcher
+const languages = [
+  { code: 'id', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+];
+const currentLang = ref('id');
+const showLangDropdown = ref(false);
+
+const setLanguage = (code: string) => {
+  currentLang.value = code;
+  showLangDropdown.value = false;
+  // TODO: Implement actual i18n logic here
+};
+
+const currentLanguage = computed(() => languages.find(l => l.code === currentLang.value));
+
+// Notifications
+const showNotifications = ref(false);
+const notifications = ref([
+  { id: 1, title: 'Tugas baru tersedia', message: 'Matematika - Bab 5 telah ditambahkan', time: '5 menit lalu', read: false },
+  { id: 2, title: 'Pengumuman', message: 'Ujian semester akan dimulai minggu depan', time: '1 jam lalu', read: false },
+  { id: 3, title: 'Nilai diperbarui', message: 'Nilai quiz Bahasa Indonesia telah dirilis', time: '2 jam lalu', read: true },
+]);
+
+const unreadCount = computed(() => notifications.value.filter(n => !n.read).length);
+
+const markAsRead = (id: number) => {
+  const notif = notifications.value.find(n => n.id === id);
+  if (notif) notif.read = true;
+};
+
+const markAllAsRead = () => {
+  notifications.value.forEach(n => n.read = true);
+};
+
+// User menu
 const userMenuItems = [
   { label: "Profile", value: "profile" },
   { label: "Settings", value: "settings" },
@@ -37,27 +73,50 @@ const handleUserMenuSelect = (item: { value?: string }) => {
     navigateTo(`/${item.value}`);
   }
 };
+
+// Close dropdowns when clicking outside
+const closeDropdowns = () => {
+  showLangDropdown.value = false;
+  showNotifications.value = false;
+};
+
+// Handle click outside to close dropdowns
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  // Check if click is outside language dropdown
+  if (!target.closest('.lang-dropdown-container')) {
+    showLangDropdown.value = false;
+  }
+  // Check if click is outside notification dropdown
+  if (!target.closest('.notification-dropdown-container')) {
+    showNotifications.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
 <template>
   <header
     :class="[
-      'fixed top-0 z-30 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 transition-all duration-300',
+      'fixed top-0 z-30 h-16 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg transition-all duration-300',
       sidebarLayout === 'horizontal' 
         ? 'left-0 right-0' 
         : sidebarCollapsed ? 'left-0 lg:left-20 right-0' : 'left-0 lg:left-64 right-0',
     ]"
+    style="box-shadow: rgba(145, 158, 171, 0.2) 0px 0px 2px 0px, rgba(145, 158, 171, 0.12) 0px 12px 24px -4px;"
   >
     <div class="flex items-center justify-between h-full px-4 lg:px-6">
       <!-- Left section -->
       <div class="flex items-center gap-4">
         <!-- Logo (only for horizontal layout on desktop) -->
-        <div v-if="sidebarLayout === 'horizontal'" class="hidden lg:flex items-center gap-3 mr-4">
-          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">A</span>
-          </div>
-          <span class="font-bold text-lg text-slate-900 dark:text-white">Admin</span>
-        </div>
+        <UiAppLogo v-if="sidebarLayout === 'horizontal'" class="hidden lg:flex mr-4" />
 
         <!-- Mobile menu button (for both layouts on mobile) -->
         <button
@@ -129,6 +188,45 @@ const handleUserMenuSelect = (item: { value?: string }) => {
           />
         </div>
 
+        <!-- Language Switcher -->
+        <div class="relative lang-dropdown-container">
+          <button
+            class="flex items-center gap-1.5 px-2.5 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            @click="showLangDropdown = !showLangDropdown"
+          >
+            <span class="text-lg">{{ currentLanguage?.flag }}</span>
+            <!-- <span class="hidden sm:inline text-sm font-medium">{{ currentLanguage?.code.toUpperCase() }}</span> -->
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <!-- Language Dropdown -->
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 scale-95 -translate-y-2"
+            enter-to-class="opacity-100 scale-100 translate-y-0"
+            leave-active-class="transition-all duration-150 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
+          >
+            <div
+              v-if="showLangDropdown"
+              class="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50"
+            >
+              <button
+                v-for="lang in languages"
+                :key="lang.code"
+                class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                :class="{ 'bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400': currentLang === lang.code }"
+                @click="setLanguage(lang.code)"
+              >
+                <span class="text-lg">{{ lang.flag }}</span>
+                <span>{{ lang.name }}</span>
+              </button>
+            </div>
+          </Transition>
+        </div>
+
         <!-- Theme toggle - ClientOnly to prevent hydration mismatch -->
         <ClientOnly>
           <button
@@ -150,12 +248,70 @@ const handleUserMenuSelect = (item: { value?: string }) => {
         </ClientOnly>
 
         <!-- Notifications -->
-        <button class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors relative">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <div class="relative notification-dropdown-container">
+          <button
+            class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors relative"
+            @click="showNotifications = !showNotifications"
+          >
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span v-if="unreadCount > 0" class="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-medium">
+              {{ unreadCount }}
+            </span>
+          </button>
+          <!-- Notifications Dropdown -->
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 scale-95 -translate-y-2"
+            enter-to-class="opacity-100 scale-100 translate-y-0"
+            leave-active-class="transition-all duration-150 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-95"
+          >
+            <div
+              v-if="showNotifications"
+              class="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
+            >
+              <!-- Header -->
+              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                <h3 class="font-semibold text-slate-900 dark:text-white">Notifikasi</h3>
+                <button
+                  v-if="unreadCount > 0"
+                  class="text-xs text-primary-500 hover:text-primary-600 font-medium"
+                  @click="markAllAsRead"
+                >
+                  Tandai semua dibaca
+                </button>
+              </div>
+              <!-- Notification List -->
+              <div class="max-h-80 overflow-y-auto">
+                <div
+                  v-for="notif in notifications"
+                  :key="notif.id"
+                  class="px-4 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                  :class="{ 'bg-primary-50/50 dark:bg-primary-950/30': !notif.read }"
+                  @click="markAsRead(notif.id)"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="w-2 h-2 mt-2 rounded-full flex-shrink-0" :class="notif.read ? 'bg-transparent' : 'bg-primary-500'"></div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-slate-900 dark:text-white truncate">{{ notif.title }}</p>
+                      <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{{ notif.message }}</p>
+                      <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ notif.time }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Footer -->
+              <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <button class="w-full text-sm text-primary-500 hover:text-primary-600 font-medium">
+                  Lihat semua notifikasi
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
 
         <!-- User menu - ClientOnly to prevent hydration mismatch -->
         <ClientOnly>

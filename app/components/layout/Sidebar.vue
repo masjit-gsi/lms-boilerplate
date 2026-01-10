@@ -11,6 +11,29 @@ const route = useRoute();
 const sidebarLayout = ref<"vertical" | "horizontal">("vertical");
 const sidebarCollapsed = ref(false);
 
+// Hover state for auto-expand when collapsed
+const isHovered = ref(false);
+
+// Check if we're on mobile (screen < lg breakpoint)
+const isOnMobile = ref(false);
+
+onMounted(() => {
+  const checkMobile = () => {
+    isOnMobile.value = window.innerWidth < 1024;
+  };
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  onUnmounted(() => window.removeEventListener('resize', checkMobile));
+});
+
+// Computed: sidebar should show as expanded when hovered while collapsed
+// On mobile, always show as expanded (not collapsed)
+const isEffectivelyCollapsed = computed(() => {
+  // Never collapse on mobile
+  if (isOnMobile.value || isMobileOpen.value) return false;
+  return sidebarCollapsed.value && showOnDesktop.value && !isHovered.value;
+});
+
 onMounted(() => {
   sidebarLayout.value = configStore.sidebarLayout;
   sidebarCollapsed.value = configStore.sidebarCollapsed;
@@ -56,6 +79,13 @@ const isParentActive = (item: any) => {
 
 // Check if should show sidebar on desktop based on layout
 const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
+
+// Handle logout
+const handleLogout = () => {
+  authStore.logout();
+  closeMobile();
+  navigateTo("/login");
+};
 </script>
 
 <template>
@@ -78,39 +108,32 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
   <!-- Sidebar -->
   <aside
     :class="[
-      'fixed top-0 left-0 z-50 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300',
-      sidebarCollapsed && showOnDesktop ? 'w-20' : 'w-64',
+      'fixed top-0 left-0 z-50 h-full bg-white dark:bg-slate-900 transition-all duration-300',
+      isEffectivelyCollapsed ? 'w-20' : 'w-64',
       // Mobile: show when isMobileOpen is true (for both layouts)
       isMobileOpen ? 'translate-x-0' : '-translate-x-full',
       // Desktop: always show for vertical, always hide for horizontal
       showOnDesktop ? 'lg:translate-x-0' : 'lg:-translate-x-full',
     ]"
+    style="box-shadow: rgba(145, 158, 171, 0.2) 0px 0px 2px 0px, rgba(145, 158, 171, 0.12) 0px 12px 24px -4px;"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
     <!-- Logo -->
-    <div class="flex items-center h-16 px-6 border-b border-slate-200 dark:border-slate-800">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-          <span class="text-white font-bold text-sm">A</span>
-        </div>
-        <span
-          v-if="!sidebarCollapsed || !showOnDesktop"
-          class="font-bold text-lg text-slate-900 dark:text-white whitespace-nowrap"
-        >
-          Admin
-        </span>
-      </div>
+    <div class="flex items-center h-16 px-6 border-slate-200 dark:border-slate-800">
+      <UiAppLogo :collapsed="isEffectivelyCollapsed" />
     </div>
 
     <!-- Navigation -->
     <nav class="p-4 h-[calc(100vh-4rem)] overflow-y-auto">
-      <div class="space-y-1">
+      <div class="space-y-1.5">
         <template v-for="item in menus" :key="item.id || item.name">
           <!-- Item with children (dropdown) -->
           <div v-if="item.children && item.children.length > 0">
             <button
               :class="[
                 isParentActive(item) ? 'nav-item-active' : 'nav-item',
-                sidebarCollapsed && showOnDesktop ? 'justify-center px-3' : '',
+                isEffectivelyCollapsed ? 'justify-center px-3' : '',
                 'w-full'
               ]"
               @click="toggleDropdown(item.name)"
@@ -121,9 +144,9 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
                 size="md" 
                 class="flex-shrink-0"
               />
-              <span v-if="!sidebarCollapsed || !showOnDesktop" class="truncate flex-1 text-left">{{ item.name }}</span>
+              <span v-if="!isEffectivelyCollapsed" class="truncate flex-1 text-left">{{ item.name }}</span>
               <UiIcon 
-                v-if="!sidebarCollapsed || !showOnDesktop"
+                v-if="!isEffectivelyCollapsed"
                 name="IconChevronDown" 
                 type="tabler" 
                 size="sm"
@@ -144,17 +167,14 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
               leave-to-class="opacity-0 max-h-0"
             >
               <div 
-                v-if="isDropdownOpen(item.name) && (!sidebarCollapsed || !showOnDesktop)" 
-                class="mt-1 ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-1 overflow-hidden"
+                v-if="isDropdownOpen(item.name) && !isEffectivelyCollapsed" 
+                class="mt-1 ml-4 pl-2 border-l-2 border-slate-200 dark:border-slate-700 space-y-1.5 overflow-hidden"
               >
                 <NuxtLink
                   v-for="child in item.children"
                   :key="child.id || child.name"
                   :to="child.link || child.path || '#'"
-                  :class="[
-                    isActive(child.link || child.path) ? 'nav-item-active' : 'nav-item',
-                    'py-2'
-                  ]"
+                  :class="isActive(child.link || child.path) ? 'nav-sub-item-active' : 'nav-sub-item'"
                   @click="closeMobile"
                 >
                   <UiIcon 
@@ -163,7 +183,7 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
                     size="sm"
                     class="flex-shrink-0"
                   />
-                  <span class="truncate text-sm">{{ child.name }}</span>
+                  <span class="truncate">{{ child.name }}</span>
                 </NuxtLink>
               </div>
             </Transition>
@@ -175,7 +195,7 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
             :to="item.link || item.path || '#'"
             :class="[
               isActive(item.link || item.path) ? 'nav-item-active' : 'nav-item',
-              sidebarCollapsed && showOnDesktop ? 'justify-center px-3' : '',
+              isEffectivelyCollapsed ? 'justify-center px-3' : '',
             ]"
             @click="closeMobile"
           >
@@ -185,11 +205,44 @@ const showOnDesktop = computed(() => sidebarLayout.value === "vertical");
               size="md"
               class="flex-shrink-0"
             />
-            <span v-if="!sidebarCollapsed || !showOnDesktop" class="truncate">{{ item.name }}</span>
+            <span v-if="!isEffectivelyCollapsed" class="truncate">{{ item.name }}</span>
           </NuxtLink>
         </template>
       </div>
     </nav>
+
+    <!-- User Profile Section -->
+    <div class="absolute bottom-0 left-0 right-0 p-4">
+      <div 
+        class="bg-primary-50 dark:bg-primary-950/30 rounded-xl p-3"
+        :class="{ 'p-2': isEffectivelyCollapsed }"
+      >
+        <div class="flex items-center gap-3" :class="{ 'justify-center': isEffectivelyCollapsed }">
+          <!-- Avatar -->
+          <UiAvatar :name="authStore.user?.name || 'User'" size="md" />
+          
+          <!-- User Info (hidden when collapsed) -->
+          <div v-if="!isEffectivelyCollapsed" class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">
+              {{ authStore.user?.name || 'User' }}
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {{ typeof authStore.user?.role === 'object' ? authStore.user?.role?.name : authStore.user?.role || 'Guest' }}
+            </p>
+          </div>
+          
+          <!-- Logout Button -->
+          <button
+            v-if="!isEffectivelyCollapsed"
+            class="p-2 text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-lg transition-colors"
+            title="Logout"
+            @click="handleLogout"
+          >
+            <UiIcon name="IconPower" type="tabler" size="md" />
+          </button>
+        </div>
+      </div>
+    </div>
   </aside>
 </template>
 

@@ -6,10 +6,13 @@
       <div class="absolute -top-20 -right-20 w-60 h-60 bg-primary-300/30 dark:bg-primary-800/20 rounded-full"></div>
       <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-primary-300/30 dark:bg-primary-800/20 rounded-full"></div>
       
+      <!-- Logo - Top Left Corner -->
+      <UiAppLogo position="absolute-top-left" />
+
       <!-- Image -->
       <div class="relative z-10 mb-12">
         <img 
-          src="/images/illustration-container.png" 
+          src="/images/login-ilus.svg" 
           alt="Learning Illustration" 
           class="w-full max-w-sm object-contain"
         />
@@ -77,41 +80,28 @@
 
     <!-- Right Side - Form -->
     <div class="w-full lg:w-1/2 flex flex-col bg-white dark:bg-slate-900">
-      <!-- Header -->
-      <div class="flex items-center justify-between p-6 lg:p-8">
-        <!-- Logo -->
-        <div class="flex items-center gap-2">
-          <div class="pl-2 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
-            <UiIcon name="mdi-school" class="w-6 h-6 text-white" />
-          </div>
-          <span class="text-xl font-bold text-slate-900 dark:text-white">Greatclass<sup class="text-xs text-primary-500">LMS</sup></span>
-        </div>
-        <!-- <a href="/" class="text-primary-500 hover:text-primary-600 text-sm font-medium underline">
-          Back to Home
-        </a> -->
-      </div>
-      
       <!-- Form Container -->
       <div class="flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-24 pb-12">
         <div class="max-w-md w-full mx-auto">
           <!-- Title -->
-          <h2 class="text-3xl font-bold text-slate-900 dark:text-white mb-8">Sign into Your Account</h2>
+          <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Welcome to Greatclass</h2>
+          <p class="text-slate-600 dark:text-slate-400 mb-8">Sign into Your Account</p>
 
           <!-- Form -->
-          <UiForm ref="formRef" class="space-y-5" @submit="handleSubmit">
+          <UiForm ref="formRef" class="space-y-6" @submit="handleSubmit">
             <UiInput
-            v-model="form.username"
-            name="username"
-            type="text"
-            label="Username"
-            placeholder="Enter your username"
-            :rules="usernameRules"
-            size="lg"
-          >
-            <template #prefix>
-              <UiIcon name="mdi-email-outline" size="md" />
-            </template>
-          </UiInput>
+              v-model="form.username"
+              name="username"
+              type="text"
+              label="Username"
+              placeholder="Enter your username"
+              :rules="usernameRules"
+              size="lg"
+            >
+              <template #prefix>
+                <UiIcon name="mdi-email-outline" size="md" />
+              </template>
+            </UiInput>
 
             <UiInput
               v-model="form.password"
@@ -158,7 +148,7 @@
           <!-- Divider -->
           <div class="flex items-center gap-4 my-6">
             <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-            <span class="text-sm text-slate-500 dark:text-slate-400">Or</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">or sign in with</span>
             <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
           </div>
 
@@ -184,7 +174,7 @@
 
           <!-- Copyright -->
         <p class="mt-8 text-center text-sm text-slate-600 dark:text-slate-400">
-          Copyright © 2026 by Your Company
+          Copyright © 2026 Greatclass
         </p>
         </div>
       </div>
